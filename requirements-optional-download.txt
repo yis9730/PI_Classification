@@ -1,0 +1,8 @@
+# Optional utilities for downloading public datasets.
+#
+# Kaggle requires a Kaggle API token at ~/.kaggle/kaggle.json.
+# Google Drive folder download may still require manual browser download
+# depending on sharing and quota behavior.
+
+kaggle==1.6.17
+gdown==5.2.1
