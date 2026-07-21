@@ -8,6 +8,6 @@ The release package was checked without retraining models.
 - The ResNet-18 feature weight matched the documented SHA-256 value.
 - Using existing fold prediction files, reduced bootstrap smoke testing and full code-path tests for Friedman--Nemenyi, critical-difference, Sankey, staging-direction, confusion matrix, ROC, and augmentation-heatmap generation completed successfully.
 
-These checks establish packaging and code-path compatibility. They are not a new training run or an independent numerical reproduction of the manuscript results. Full numerical recreation requires the original public data downloads, authorized HUMC access where applicable, the complete checkpoint/prediction archives, and the locked environment.
+These checks establish packaging and code-path compatibility. They are not a new training run or an independent numerical reproduction of the manuscript results. The original classification-weight and prediction archives are not distributed. Public visitors download PIID and Kaggle, train new PIID weights locally, and then run evaluation. Recreating the HUMC portions additionally requires authorized HUMC access.
 
 Seed audit: the study seed and split seed are 40. As in the original training code, each fold's `DataLoader` shuffle generator uses `40 + fold_id`; the full model/NumPy/Python seed is not reset to 41-45 for each fold.

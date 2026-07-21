@@ -30,6 +30,8 @@ Training
 - Five folds
 - AdamW, weighted cross entropy, batch size 16, learning rate 1e-5,
   weight decay 1e-4, maximum 50 epochs, early-stopping patience 20
+- Study-trained classification weights are not distributed; visitors train
+  new fold-specific weights locally before evaluation
 
 Validation
 - PIID-trained: PIID held-out internal test, private HUMC external validation,
