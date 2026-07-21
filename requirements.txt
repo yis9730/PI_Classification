@@ -1,4 +1,4 @@
-# Core runtime dependencies for the public PIID-main reproduction package.
+# Core runtime dependencies for the public reproduction package.
 #
 # Important:
 # - These versions are based on the original RTX 3090 server environment,
@@ -25,4 +25,3 @@ openpyxl==3.1.5
 pingouin==0.5.5
 scikit-posthocs==0.11.4
 umap-learn==0.5.6
-gdown==5.2.1

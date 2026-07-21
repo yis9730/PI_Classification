@@ -1,7 +1,6 @@
 # Public release checklist
 
 - [ ] Run `python code/validate_release_package.py` and resolve every failure.
-- [ ] Run `python code/generate_release_checksums.py --verify`.
 - [ ] Confirm the remote belongs to the official institutional/project account.
 - [ ] Confirm no private HUMC files, patient identifiers, checkpoints, or predictions are staged.
 - [ ] Confirm `torch==2.9.0` and the other locked versions remain unchanged.

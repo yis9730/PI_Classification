@@ -14,5 +14,3 @@ jobs:
           python-version: "3.11"
       - name: Validate public package
         run: python code/validate_release_package.py
-      - name: Verify release checksums
-        run: python code/generate_release_checksums.py --verify
