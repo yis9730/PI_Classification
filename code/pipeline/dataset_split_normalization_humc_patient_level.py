@@ -14,11 +14,11 @@ import random
 import sys
 from pathlib import Path
 
+import albumentations as A
 import numpy as np
 import pandas as pd
-import cv2
 import torch
-from PIL import Image, ImageOps
+from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold, train_test_split
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -142,19 +142,16 @@ def create_folds(trainval: pd.DataFrame) -> dict[str, dict[str, list[int]]]:
 class RGBDataset(Dataset):
     def __init__(self, paths: list[str]):
         self.paths = paths
+        self.transform = A.Compose([A.Resize(INPUT_SIZE, INPUT_SIZE)])
 
     def __len__(self) -> int:
         return len(self.paths)
 
     def __getitem__(self, index: int) -> torch.Tensor:
         with Image.open(self.paths[index]) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             array = np.asarray(image)
-            array = cv2.resize(
-                array,
-                (INPUT_SIZE, INPUT_SIZE),
-                interpolation=cv2.INTER_LINEAR,
-            ).astype(np.float32) / 255.0
+        array = self.transform(image=array)["image"].astype(np.float32) / 255.0
         return torch.from_numpy(array).permute(2, 0, 1)
 
 

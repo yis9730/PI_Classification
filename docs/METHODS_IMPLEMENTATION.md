@@ -2,9 +2,10 @@
 
 | Study method | Authoritative implementation |
 |---|---|
-| Duplicate candidate screening | `code/data_curation/screen_duplicate_candidates.py` |
-| Pair decisions and exclusions | `code/data_curation/duplicate_pairs.csv`, exclusion manifests |
-| Center-square crop and resize | `code/data_curation/prepare_public_datasets.py` |
+| Supplementary duplicate candidate screening | `code/data_curation/screen_duplicate_candidates.py` |
+| Authoritative pair decisions and exclusions | `code/data_curation/duplicate_pairs.csv`, exclusion manifests |
+| Copy retained public images unchanged | `code/data_curation/prepare_public_datasets.py` |
+| Direct 224 x 224 model-input resize | `A.Resize` in `code/pipeline/*.py` |
 | Cohort and split summary (Table 1) | `code/analysis/build_cohort_summary_table.py` |
 | PIID image-level split | `code/pipeline/dataset_split_normalization_piid_main.py` |
 | HUMC patient-level split | `code/pipeline/dataset_split_normalization_humc_patient_level.py` |

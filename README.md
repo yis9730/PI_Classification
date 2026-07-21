@@ -47,7 +47,12 @@ python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID
 python code/pipeline/dataset_split_normalization_piid_main.py --use-existing
 ```
 
-The curation script applies the released duplicate exclusions, EXIF-orientation correction, centre-square crop, and 224 × 224 resize. It validates the target public analytic counts (PIID 1,081; Kaggle 141).
+The curation script applies the released duplicate exclusions and copies every
+retained source image unchanged. It does not crop, resize, re-encode, or alter
+EXIF metadata. It validates the target public analytic counts (PIID 1,081;
+Kaggle 141). The `224 x 224` resize is applied later, in memory, by the model
+input transforms. For safety, the command rejects source/output path overlap,
+unexpected raw counts, and unmatched exclusion entries.
 
 ## Core study pipeline
 
@@ -73,9 +78,9 @@ HUMC training and external validation use the same entry points with `humc` in t
 
 ## Feature workflow: Main Figures 3–4 and Table 3
 
-These manuscript analyses resize images directly to `224 x 224`; they do not
-use the separate duplicate-screening `Resize(256)`/centre-crop route. First
-export the shared ResNet-18 feature vectors in the main environment:
+These manuscript analyses resize images directly to `224 x 224`. No
+`Resize(256)` or centre-crop step is used. First export the shared ResNet-18
+feature vectors in the main environment:
 
 ```bash
 python code/analysis/extract_resnet18_features.py --dataset PIID=data/piid --dataset Kaggle=data/kaggle --output-dir data/results/tables/feature_space/features

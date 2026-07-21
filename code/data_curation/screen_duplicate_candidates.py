@@ -1,9 +1,10 @@
-"""Screen within- and cross-dataset duplicate candidates.
+"""Supplementary screen for within- and cross-dataset duplicate candidates.
 
-This reproduces the candidate-generation stage, not the final expert decision.
 Images are encoded by a frozen ResNet-18, L2-normalized, and screened at cosine
-similarity >= 0.85. Feature candidates are compared again after resizing RGB
-pixels to 128 x 128; normalized MAE <= 0.15 passes the pixel screen.
+similarity >= 0.85. Each feature candidate is also compared after resizing RGB
+pixels to 128 x 128; normalized MAE <= 0.15 is reported as a corroborating
+pixel-screen flag. This utility does not make exclusion decisions. The released
+pair decisions and exclusion manifests are the authoritative curation record.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import numpy as np
 import pandas as pd
 import timm
 import torch
-from PIL import Image, ImageOps
+from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
@@ -75,8 +76,7 @@ class FeatureDataset(Dataset):
         self.paths = paths
         self.transform = transforms.Compose(
             [
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
+                transforms.Resize((224, 224)),
                 transforms.ToTensor(),
                 transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
             ]
@@ -87,7 +87,7 @@ class FeatureDataset(Dataset):
 
     def __getitem__(self, index: int) -> torch.Tensor:
         with Image.open(self.paths[index]) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             return self.transform(image)
 
 
@@ -143,7 +143,7 @@ def extract_features(
 
 def pixel_array(path: str, size: int) -> np.ndarray:
     with Image.open(path) as image:
-        image = ImageOps.exif_transpose(image).convert("RGB")
+        image = image.convert("RGB")
         image = image.resize((size, size), Image.Resampling.LANCZOS)
         return np.asarray(image, dtype=np.float32) / 255.0
 
@@ -166,8 +166,7 @@ def candidate_pairs(
             right = left + 1 + int(offset)
             right_pixels = pixel_array(table.iloc[right]["image_path"], pixel_size)
             mae = float(np.mean(np.abs(left_pixels - right_pixels)))
-            if mae > mae_threshold:
-                continue
+            pixel_screen_passed = mae <= mae_threshold
             a, b = table.iloc[left], table.iloc[right]
             rows.append(
                 {
@@ -182,6 +181,12 @@ def candidate_pairs(
                     "cosine_similarity": float(similarity[left, right]),
                     "normalized_mae": mae,
                     "pixel_similarity": 1.0 - mae,
+                    "pixel_screen_passed": pixel_screen_passed,
+                    "candidate_basis": (
+                        "resnet18_cosine_and_pixel"
+                        if pixel_screen_passed
+                        else "resnet18_cosine_only"
+                    ),
                     "requires_expert_review": True,
                 }
             )

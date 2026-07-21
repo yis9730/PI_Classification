@@ -38,7 +38,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from albumentations.pytorch import ToTensorV2
-from PIL import Image, ImageOps
+from PIL import Image
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -124,7 +124,7 @@ class AlbImageDataset(Dataset):
         path = self.image_paths[idx]
         label = int(self.labels[idx])
         with Image.open(path) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             image = np.asarray(image)
         if self.transform is not None:
             image = self.transform(image=image)["image"]

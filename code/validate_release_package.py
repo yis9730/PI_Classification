@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import csv
-import re
 import sys
 from pathlib import Path
 
@@ -76,6 +75,19 @@ def augmentation_count(path: Path) -> int | None:
     return None
 
 
+def assigned_integer(tree: ast.Module, name: str) -> int | None:
+    """Return a module-level integer assignment, if present."""
+    for node in tree.body:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        value = node.value
+        if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            if isinstance(value, ast.Constant) and isinstance(value.value, int):
+                return value.value
+    return None
+
+
 def validate_training_seed_contract(path: Path) -> list[str]:
     """Check the study-wide seed and fold-local loader shuffle contract."""
     content = path.read_text(encoding="utf-8")
@@ -111,10 +123,84 @@ def main() -> None:
 
     feature_source = (ROOT / "code/analysis/extract_resnet18_features.py").read_text(encoding="utf-8")
     duplicate_source = (ROOT / "code/data_curation/screen_duplicate_candidates.py").read_text(encoding="utf-8")
-    if "transforms.Resize((224, 224))" not in feature_source or "transforms.Resize(256)" in feature_source:
-        failures.append("manuscript feature extraction must resize directly to 224 x 224")
-    if "transforms.Resize(256)" not in duplicate_source or "transforms.CenterCrop(224)" not in duplicate_source:
-        failures.append("duplicate screening must use short-side 256 resize and 224 center crop")
+    curation_source = (ROOT / "code/data_curation/prepare_public_datasets.py").read_text(encoding="utf-8")
+    for label, source in (
+        ("manuscript feature extraction", feature_source),
+        ("duplicate screening", duplicate_source),
+    ):
+        if "transforms.Resize((224, 224))" not in source:
+            failures.append(f"{label} must resize model inputs directly to 224 x 224")
+        if "transforms.Resize(256)" in source or "transforms.CenterCrop" in source:
+            failures.append(f"{label} must not use a 256 resize or center crop")
+
+    if "shutil.copy2(src, dst)" not in curation_source:
+        failures.append("public-data curation must copy retained source files unchanged")
+    for forbidden in (
+        "center_crop_square",
+        "save_square_image",
+        "ImageOps.exif_transpose",
+        "image.crop(",
+        "image.resize(",
+        "image.save(",
+    ):
+        if forbidden in curation_source:
+            failures.append(f"public-data curation contains a pixel-changing operation: {forbidden}")
+    for required_guard in (
+        "validate_source_output_separation",
+        "paths_overlap",
+        "matched_exclusions",
+        "expected_raw",
+    ):
+        if required_guard not in curation_source:
+            failures.append(f"public-data curation safety guard is missing: {required_guard}")
+
+    classification_paths = (
+        "code/pipeline/dataset_split_normalization_piid_main.py",
+        "code/pipeline/dataset_split_normalization_humc_patient_level.py",
+        "code/pipeline/train_piid_6models_17augmentations.py",
+        "code/pipeline/train_humc_6models_17augmentations.py",
+        "code/pipeline/evaluate_piid_trained_final_results.py",
+        "code/pipeline/evaluate_humc_trained_final_results.py",
+    )
+    classification_sources = {}
+    for relative in classification_paths:
+        path = ROOT / relative
+        source = path.read_text(encoding="utf-8")
+        classification_sources[relative] = source
+        tree = ast.parse(source, filename=str(path))
+        if assigned_integer(tree, "INPUT_SIZE") != 224:
+            failures.append(f"{relative}: INPUT_SIZE must be the integer 224")
+        if "ImageOps.exif_transpose" in source:
+            failures.append(f"{relative}: unreported EXIF-orientation transform is present")
+
+    required_resize_snippets = {
+        "code/pipeline/dataset_split_normalization_piid_main.py":
+            "self.resize = A.Compose([A.Resize(input_size, input_size)])",
+        "code/pipeline/dataset_split_normalization_humc_patient_level.py":
+            "self.transform = A.Compose([A.Resize(INPUT_SIZE, INPUT_SIZE)])",
+        "code/pipeline/evaluate_piid_trained_final_results.py":
+            "A.Resize(INPUT_SIZE, INPUT_SIZE)",
+        "code/pipeline/evaluate_humc_trained_final_results.py":
+            "A.Resize(INPUT_SIZE, INPUT_SIZE)",
+    }
+    for relative, snippet in required_resize_snippets.items():
+        source = classification_sources[relative]
+        if snippet not in source or source.count("A.Resize(") != 1:
+            failures.append(f"{relative}: expected one direct Albumentations resize")
+        if "CenterCrop" in source:
+            failures.append(f"{relative}: evaluation/normalisation must not center-crop images")
+
+    for relative in (
+        "code/pipeline/train_piid_6models_17augmentations.py",
+        "code/pipeline/train_humc_6models_17augmentations.py",
+    ):
+        source = classification_sources[relative]
+        if "transforms = [A.Resize(INPUT_SIZE, INPUT_SIZE)]" not in source:
+            failures.append(f"{relative}: training must begin with direct 224 x 224 resize")
+        if source.count("A.Resize(INPUT_SIZE, INPUT_SIZE)") != 3:
+            failures.append(f"{relative}: train, centre-zoom, and eval resize contract changed")
+        if source.count("A.CenterCrop(") != 1 or "use_center_zoomin" not in source:
+            failures.append(f"{relative}: CenterCrop must occur only in centre zoom-in augmentation")
 
     for relative in (
         "code/pipeline/train_piid_6models_17augmentations.py",
@@ -200,7 +286,9 @@ def main() -> None:
     print(" - 17 training conditions in each training entry point")
     print(" - 20 duplicate pairs; 10 PIID and 18 Kaggle exclusions")
     print(" - PyTorch 2.9.0 / TorchVision 0.24.0 and two environment contracts locked")
-    print(" - ResNet-18 feature and duplicate-screen preprocessing contracts verified")
+    print(" - retained public images are copied unchanged during curation")
+    print(" - direct 224 x 224 model-input resize contracts verified")
+    print(" - CenterCrop is confined to the centre zoom-in training augmentation")
     print(" - no prohibited personal/server paths or legacy test references")
 
 

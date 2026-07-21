@@ -8,14 +8,14 @@
 
 ## `data_curation`
 
-- `prepare_public_datasets.py`: released exclusions, EXIF correction, centre-square crop, and resize for PIID/Kaggle.
-- `screen_duplicate_candidates.py`: ResNet-18 and pixel-similarity candidate screen for expert duplicate review.
+- `prepare_public_datasets.py`: released exclusions and byte-preserving copies of retained PIID/Kaggle source files.
+- `screen_duplicate_candidates.py`: supplementary ResNet-18 and pixel-similarity candidate screen for expert review.
 - `duplicate_pairs.csv` and `*_duplicate_exclusions.csv`: reviewed decisions and executable public exclusion manifests.
 
 ## `pipeline`
 
-- `dataset_split_normalization_piid_main.py`: PIID image-level split and per-fold normalisation.
-- `dataset_split_normalization_humc_patient_level.py`: controlled HUMC patient-grouped split workflow.
+- `dataset_split_normalization_piid_main.py`: PIID image-level split and per-fold normalisation using Albumentations 224 x 224 resize.
+- `dataset_split_normalization_humc_patient_level.py`: controlled HUMC patient-grouped split workflow using the same resize method.
 - `train_{piid|humc}_6models_17augmentations.py`: five-fold training entry points for six architectures and 17 augmentation conditions.
 - `evaluate_{piid|humc}_trained_final_results.py`: internal and cross-dataset validation from locally generated fold weights.
 

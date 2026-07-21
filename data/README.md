@@ -10,7 +10,7 @@ data/
   templates/  example input files
 ```
 
-PIID and Kaggle images are prepared with `code/data_curation/prepare_public_datasets.py`. Source downloads may be stored anywhere; the script writes center-cropped 224 x 224 images to `data/piid` and `data/kaggle`.
+PIID and Kaggle images are prepared with `code/data_curation/prepare_public_datasets.py`. Source downloads may be stored anywhere; after applying the released exclusions, the script copies retained files unchanged to `data/piid` and `data/kaggle`. Images keep their original dimensions and encoding on disk. The model pipelines resize them to 224 x 224 in memory.
 
 HUMC data and every HUMC-derived split/normalisation file remain local and are ignored by Git. The public package contains neither HUMC aggregate metadata nor an input template; investigators with authorised access create these local inputs according to their institutional data-governance process.
 

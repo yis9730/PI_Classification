@@ -27,10 +27,11 @@ import json
 import sys
 from pathlib import Path
 
+import albumentations as A
 import numpy as np
 import pandas as pd
 import torch
-from PIL import Image, ImageOps
+from PIL import Image
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -63,6 +64,7 @@ class NormStatsDataset(Dataset):
     def __init__(self, image_paths: list[str], input_size: int = INPUT_SIZE):
         self.image_paths = list(image_paths)
         self.input_size = input_size
+        self.resize = A.Compose([A.Resize(input_size, input_size)])
 
     def __len__(self) -> int:
         return len(self.image_paths)
@@ -70,9 +72,9 @@ class NormStatsDataset(Dataset):
     def __getitem__(self, idx: int) -> torch.Tensor:
         path = self.image_paths[idx]
         with Image.open(path) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
-            image = image.resize((self.input_size, self.input_size), Image.Resampling.BILINEAR)
-            arr = np.asarray(image, dtype=np.float32) / 255.0
+            image = image.convert("RGB")
+            arr = np.asarray(image)
+        arr = self.resize(image=arr)["image"].astype(np.float32) / 255.0
         return torch.from_numpy(arr).permute(2, 0, 1)
 
 

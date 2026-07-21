@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 
 
 DATASETS = ["PIID", "HUMC", "Kaggle"]
@@ -30,7 +30,7 @@ def contact_sheet(paths: list[Path]) -> Image.Image:
     canvas = Image.new("RGB", (TILE_SIZE * len(paths), TILE_SIZE), "white")
     for index, path in enumerate(paths):
         with Image.open(path) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             image.thumbnail((TILE_SIZE, TILE_SIZE))
             tile = Image.new("RGB", (TILE_SIZE, TILE_SIZE), "white")
             tile.paste(image, ((TILE_SIZE - image.width) // 2, (TILE_SIZE - image.height) // 2))

@@ -12,9 +12,9 @@ Environment
 
 Data preparation
 - Four stages: 1, 2, 3, 4
-- Correct EXIF orientation
-- Crop the largest square around the image center / midpoint of the long axis
-- Resize the square to 224 x 224
+- Apply the released duplicate-exclusion manifests
+- Copy retained PIID and Kaggle source files without crop, resize, re-encoding,
+  or EXIF modification
 - Final public data: PIID 1,081 images; Kaggle 141 images
 
 Duplicate curation
@@ -29,6 +29,10 @@ Training
   Swin-T, ConvNeXt-S
 - 17 conditions: no augmentation plus 16 augmentation conditions
 - Five folds
+- Load source images as RGB and resize every model input directly to 224 x 224
+  with Albumentations `A.Resize(224, 224)`
+- `A.CenterCrop` is used only in the named centre zoom-in augmentation; it is
+  not a dataset-curation operation
 - AdamW, weighted cross entropy, batch size 16, learning rate 1e-5,
   weight decay 1e-4, maximum 50 epochs, early-stopping patience 20
 - Study-trained classification weights are not distributed; visitors train
