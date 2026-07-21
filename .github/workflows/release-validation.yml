@@ -1,0 +1,18 @@
+name: release-validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  static-release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate public package
+        run: python code/validate_release_package.py
+      - name: Verify release checksums
+        run: python code/generate_release_checksums.py --verify

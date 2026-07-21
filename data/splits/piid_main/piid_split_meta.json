@@ -1,0 +1,56 @@
+{
+  "dataset": "PIID",
+  "main_role": "main development dataset",
+  "split_unit": "image",
+  "stratification_unit": "stage",
+  "random_seed": 40,
+  "test_ratio": 0.15,
+  "n_folds": 5,
+  "input_size": 224,
+  "total_images": 1081,
+  "n_trainval_images": 918,
+  "n_test_images": 163,
+  "stage_distribution": {
+    "total": {
+      "1": 229,
+      "2": 311,
+      "3": 273,
+      "4": 268
+    },
+    "trainval": {
+      "1": 194,
+      "2": 264,
+      "3": 232,
+      "4": 228
+    },
+    "test": {
+      "1": 35,
+      "2": 47,
+      "3": 41,
+      "4": 40
+    }
+  },
+  "split_files": {
+    "all_images": "data/splits/piid_main/piid_all_images.csv",
+    "trainval": "data/splits/piid_main/piid_trainval_set.csv",
+    "test": "data/splits/piid_main/piid_test_set.csv",
+    "fold_indices": "data/splits/piid_main/piid_fold_indices.json",
+    "normalization_stats": "data/splits/piid_main/normalization_stats.csv"
+  },
+  "normalization_policy": {
+    "csv": "data/splits/piid_main/normalization_stats.csv",
+    "computed_from": "PIID train indices only, separately for each fold",
+    "not_included": [
+      "PIID validation fold",
+      "PIID internal test",
+      "HUMC external",
+      "Kaggle external"
+    ],
+    "do_not_mix_with": "data/splits/humc_patient_level/normalization_stats.csv"
+  },
+  "handover_update": {
+    "date": "2026-07-01",
+    "source_file": "normalization_stats_piid.csv",
+    "sklearn_used_for_split_file_generation": "1.9.0"
+  }
+}

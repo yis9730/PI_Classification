@@ -1,0 +1,54 @@
+PRESSURE INJURY CLASSIFICATION: PUBLIC REPRODUCIBILITY SUMMARY
+
+Environment
+- Python 3.11
+- PyTorch 2.9.0
+- TorchVision 0.24.0
+- timm 1.0.22
+- Study base random seed: 40
+- Train/test and five-fold partition random seed: 40
+- DataLoader shuffle generator: 40 + fold index (fold-local ordering only)
+
+Data preparation
+- Four stages: 1, 2, 3, 4
+- Correct EXIF orientation
+- Crop the largest square around the image center / midpoint of the long axis
+- Resize the square to 224 x 224
+- Final public data: PIID 1,081 images; Kaggle 141 images
+
+Duplicate curation
+- 20 reviewed public-data pairs (40 images)
+- 12 concordant-pair exclusions; one representative retained per pair
+- 16 discordant-pair exclusions; both conflicting images excluded
+- Total excluded: 28 images (PIID 10; Kaggle 18)
+- Exact pair decisions: code/data_curation/duplicate_pairs.csv
+
+Training
+- Six architectures: ResNet-50, DenseNet-121, EfficientNetV2-S, ViT-B/16,
+  Swin-T, ConvNeXt-S
+- 17 conditions: no augmentation plus 16 augmentation conditions
+- Five folds
+- AdamW, weighted cross entropy, batch size 16, learning rate 1e-5,
+  weight decay 1e-4, maximum 50 epochs, early-stopping patience 20
+
+Validation
+- PIID-trained: PIID held-out internal test, private HUMC external validation,
+  and Kaggle external validation
+- HUMC-trained: HUMC patient-held-out internal test, PIID external validation,
+  and Kaggle external validation
+- HUMC code is public; HUMC images, identifiers, labels, and image-level splits
+  are private and are not included
+
+Analysis
+- Fold-specific predictions are retained; no fold prediction ensemble is used
+- Fold-wise image bootstrap: 1,000 replicates, seed 40, percentile 95% interval
+- Dataset-specific Friedman analysis with Iman-Davenport omnibus decision and
+  Nemenyi post-hoc comparison
+- Fold-averaged confusion Sankey visualization
+- Frozen ResNet-18 512-dimensional feature workflow; see
+  docs/RESNET18_FEATURES.md for the required checkpoint SHA-256
+
+Before publication
+- Run: python code/validate_release_package.py
+- Select an institutionally approved license
+- Initialize/push this folder only to the designated official account

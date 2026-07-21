@@ -1,0 +1,13 @@
+Model,Params,Params_Raw,Size_MB
+tinynet_a,5.7M,5729376,22.1
+densenet121,7.5M,7480708,28.9
+efficientnet_v2_s,21.0M,20999892,80.7
+resnext50,25.1M,25082180,95.9
+resnet50,25.6M,25610308,97.9
+resnext50_wfpn,26.4M,26383613,100.9
+swin_tiny_patch4_window7_224,27.8M,27816190,107.2
+convnext_small,49.8M,49751524,189.8
+vit_base_patch16_224,86.1M,86095492,328.4
+swin_base_patch4_window7_224,87.3M,87270076,334.4
+resnext101,88.8M,88844612,339.7
+efficientnet_v2_l,118.1M,118056676,452.3
