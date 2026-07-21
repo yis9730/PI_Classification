@@ -14,4 +14,7 @@ PIID and Kaggle images are prepared with `code/data_curation/prepare_public_data
 
 HUMC data remain local and are ignored by Git. Only privacy-safe aggregate split metadata and fold-wise normalization values are public.
 
-Sources: [PIID](https://drive.google.com/drive/u/0/folders/12JouktrzXIo6ywpSe2OYWRYNNIxlEKvK) and [Kaggle](https://www.kaggle.com/datasets/sinemgokoz/pressure-ulcers-stages).
+Sources:
+
+- [PIID](https://drive.google.com/drive/u/0/folders/12JouktrzXIo6ywpSe2OYWRYNNIxlEKvK): stage folders `1` through `4`.
+- [Kaggle](https://www.kaggle.com/datasets/sinemgokoz/pressure-ulcers-stages): folders `Stage_I` through `Stage_IV`.
