@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "CHECKSUMS.sha256"
 EXCLUDED_PARTS = {".git", "__pycache__", ".pytest_cache"}
+TEXT_SUFFIXES = {".csv", ".json", ".md", ".py", ".txt", ".yml", ".yaml"}
+TEXT_FILENAMES = {".gitattributes", ".gitignore"}
 
 
 def included_files() -> list[Path]:
@@ -23,6 +25,11 @@ def included_files() -> list[Path]:
 
 def digest(path: Path) -> str:
     value = hashlib.sha256()
+    if path.suffix.lower() in TEXT_SUFFIXES or path.name in TEXT_FILENAMES:
+        # Match the LF line endings enforced by .gitattributes, even when this
+        # script runs from a Windows working tree containing CRLF files.
+        value.update(path.read_bytes().replace(b"\r\n", b"\n"))
+        return value.hexdigest()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             value.update(block)
