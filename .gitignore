@@ -9,25 +9,24 @@ venv/
 env/
 *.egg-info/
 
-# Downloaded public data and all private clinical data
-data/raw/*
-!data/raw/README.md
-data/private/
-data/processed/analytic_data/*
-!data/processed/analytic_data/.gitkeep
+# Local image data
+data/piid/*
+!data/piid/.gitkeep
+data/kaggle/*
+!data/kaggle/.gitkeep
+data/humc/*
+!data/humc/.gitkeep
 
 # Private HUMC image-level split material; retain privacy-safe public files
-data/splits/humc_patient_level/all_images.csv
-data/splits/humc_patient_level/trainval_set.csv
-data/splits/humc_patient_level/test_set.csv
-data/splits/humc_patient_level/fold_indices.json
-data/splits/humc_patient_level/split_meta.json
+data/splits/humc/all_images.csv
+data/splits/humc/trainval_set.csv
+data/splits/humc/test_set.csv
+data/splits/humc/fold_indices.json
+data/splits/humc/split_meta.json
 
 # Generated results and large model files
-data/results/checkpoint/
-data/results/source_archives/
-data/results/table/
-data/results/figure/
+data/results/*
+!data/results/README.md
 *.pt
 *.pth
 *.ckpt

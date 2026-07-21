@@ -9,9 +9,9 @@ the same code evaluates it without any source-code changes.
 
 Outputs:
 
-    data/results/source_archives/inference_results_piid/__ALL_foldwise_results.csv
-    data/results/source_archives/inference_results_piid/__ALL_summary_results.csv
-    data/results/source_archives/inference_results_piid/{model}_{augmentation}/predictions/
+    data/results/predictions/piid/__ALL_foldwise_results.csv
+    data/results/predictions/piid/__ALL_summary_results.csv
+    data/results/predictions/piid/{model}_{augmentation}/predictions/
 """
 
 from __future__ import annotations

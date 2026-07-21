@@ -3,7 +3,7 @@
 All feature-based analyses used a frozen ImageNet-pretrained ResNet-18 encoder
 with a 512-dimensional pooled output. The exact study checkpoint is expected at:
 
-`data/results/checkpoint/feature_extractors/resnet18.pth`
+`data/results/checkpoints/feature_extractors/resnet18.pth`
 
 SHA-256:
 

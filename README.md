@@ -29,32 +29,27 @@ python code/check_checkpoint_compatibility.py
 
 ## Data preparation
 
-Place the downloaded public data at:
-
-```text
-data/raw/PIID/original_images/{1,2,3,4}/
-data/raw/Kaggle/original_images/{Stage_I,Stage_II,Stage_III,Stage_IV}/
-```
-
-Build the analytic folders:
+Download PIID and Kaggle from their original providers. The source folders may be stored anywhere; prepare them with:
 
 ```bash
-python code/data_curation/prepare_public_datasets.py --overwrite
+python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite
 ```
 
-For every image, EXIF orientation is first corrected. The largest possible square is then cropped from the image center: `side = min(width, height)`, with the crop centered on the midpoint of the long axis. The square is resized to 224 x 224. This is the image representation used by the training and evaluation pipelines.
+The PIID source folder must contain `1` through `4`; the Kaggle source folder must contain `Stage_I` through `Stage_IV`.
+
+Prepared images are saved in `data/piid` and `data/kaggle`. For every image, EXIF orientation is first corrected. The largest possible square is then cropped from the image center: `side = min(width, height)`, with the crop centered on the midpoint of the long axis. The square is resized to 224 x 224. This is the image representation used by the training and evaluation pipelines.
 
 Expected public analytic counts are 1,081 PIID images and 141 Kaggle images. The complete pair-level decisions are in `code/data_curation/duplicate_pairs.csv`; executable exclusion manifests are in the same directory.
 
 ## Splits and normalization
 
-The released PIID split is already in `data/splits/piid_main`. It uses an image-level stratified 15% internal test set and five stratified folds on the remaining 85%.
+The released PIID split is already in `data/splits/piid`. It uses an image-level stratified 15% internal test set and five stratified folds on the remaining 85%.
 
 ```bash
 python code/experiment/dataset_split_normalization_piid_main.py --use-existing
 ```
 
-HUMC uses a patient-level 15% held-out test set and five patient-grouped folds. Its public aggregate metadata is in `data/splits/humc_patient_level`; authorized users can regenerate private split tables as follows:
+HUMC uses a patient-level 15% held-out test set and five patient-grouped folds. Its public aggregate metadata is in `data/splits/humc`; authorized users can regenerate private split tables as follows:
 
 ```bash
 python code/experiment/dataset_split_normalization_humc_patient_level.py
@@ -92,7 +87,7 @@ python code/experiment/evaluate_piid_trained_final_results.py
 python code/experiment/evaluate_humc_trained_final_results.py
 ```
 
-Each fold model is evaluated separately. Prediction CSVs are written under `data/results/source_archives/inference_results_{piid|humc}` and are the common source for the downstream statistics and figures.
+Each fold model is evaluated separately. Prediction CSVs are written under `data/results/predictions/{piid|humc}` and are the common source for the downstream statistics and figures.
 
 ## Statistical analysis and figures
 
@@ -123,44 +118,33 @@ The bootstrap analysis does not average probabilities or majority-vote predictio
 The duplicate-candidate screen and feature-space analysis use the same ResNet-18 encoder and the same checkpoint. The checkpoint is not tracked because of its size. Place it at:
 
 ```text
-data/results/checkpoint/feature_extractors/resnet18.pth
+data/results/checkpoints/feature_extractors/resnet18.pth
 ```
 
 Then run:
 
 ```bash
-python code/data_curation/screen_duplicate_candidates.py --dataset PIID=data/processed/analytic_data/PIID --dataset Kaggle=data/processed/analytic_data/Kaggle --output data/results/table/duplicate_screen/public_candidates.csv
+python code/data_curation/screen_duplicate_candidates.py --dataset PIID=data/piid --dataset Kaggle=data/kaggle --output data/results/tables/duplicate_screen/public_candidates.csv
 
-python code/analysis/extract_resnet18_features.py --dataset PIID=data/processed/analytic_data/PIID --dataset Kaggle=data/processed/analytic_data/Kaggle --output-dir data/results/source_archives/resnet18_features
+python code/analysis/extract_resnet18_features.py --dataset PIID=data/piid --dataset Kaggle=data/kaggle --output-dir data/results/tables/feature_space/features
 
-python code/analysis/feature_space_analysis.py --feature-root data/results/source_archives/resnet18_features --datasets PIID Kaggle --output-dir data/results/table/feature_space
+python code/analysis/feature_space_analysis.py --feature-root data/results/tables/feature_space/features --datasets PIID Kaggle --output-dir data/results/tables/feature_space
 ```
 
-Authorized users can add `HUMC=data/processed/analytic_data/HUMC` to the two extraction commands and add `HUMC` to `--datasets` to recreate the three-dataset study analysis. See `docs/RESNET18_FEATURES.md` for the exact SHA-256 checksum and the intentional preprocessing difference between candidate screening and raw 512-dimensional feature analysis.
+Authorized users can add `HUMC=data/humc` to the two extraction commands and add `HUMC` to `--datasets` to recreate the three-dataset study analysis. See `docs/RESNET18_FEATURES.md` for the exact SHA-256 checksum and the intentional preprocessing difference between candidate screening and raw 512-dimensional feature analysis.
 
 ## Repository structure
 
 ```text
-code/
-  data_curation/   public dataset preparation and duplicate audit
-  development/     shared models and portable path configuration
-  experiment/      splits, training, internal/external evaluation
-  analysis/        bootstrap, rank tests, feature and error analyses
-  visualization/   evaluation, critical-difference, and Sankey figures
-data/
-  raw/             user-downloaded inputs, excluded from Git
-  processed/       generated center-square analytic images, excluded from Git
-  private/         optional authorized HUMC inputs, excluded from Git
-  splits/          public PIID split and privacy-safe HUMC metadata
-  results/         generated checkpoints, predictions, tables, and figures
-docs/              method and privacy notes
+code/   analysis and reproduction scripts
+data/   prepared images, splits, and generated results
+docs/   method and privacy notes
 ```
 
 ## Public release notes
 
 - All runtime paths are repository-relative; there are no personal workstation or server paths.
 - Private data, patient identifiers, images, checkpoints, and generated prediction files are ignored by Git.
-- The repository intentionally contains no remote URL, so it can be initialized and uploaded under the official account chosen by the research team.
 - An institutional owner should select and approve the software license before or at public release; no license grant is assumed by this package.
 
 Run `python code/validate_release_package.py` and `python code/generate_release_checksums.py --verify` before uploading. The release checklist is in `docs/PUBLIC_RELEASE_CHECKLIST.md`.

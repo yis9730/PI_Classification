@@ -124,11 +124,11 @@ def main() -> None:
             failures.append(f"Python parse failure in {path.relative_to(ROOT)}: {exc}")
 
     suspicious_private = [
-        ROOT / "data/splits/humc_patient_level/all_images.csv",
-        ROOT / "data/splits/humc_patient_level/trainval_set.csv",
-        ROOT / "data/splits/humc_patient_level/test_set.csv",
-        ROOT / "data/splits/humc_patient_level/fold_indices.json",
-        ROOT / "data/splits/humc_patient_level/split_meta.json",
+        ROOT / "data/splits/humc/all_images.csv",
+        ROOT / "data/splits/humc/trainval_set.csv",
+        ROOT / "data/splits/humc/test_set.csv",
+        ROOT / "data/splits/humc/fold_indices.json",
+        ROOT / "data/splits/humc/split_meta.json",
     ]
     for path in suspicious_private:
         if path.exists():

@@ -9,9 +9,9 @@ Run this script only inside an environment authorized to use those data.
 
 Outputs:
 
-    data/results/source_archives/inference_results_humc/__ALL_foldwise_results.csv
-    data/results/source_archives/inference_results_humc/__ALL_summary_results.csv
-    data/results/source_archives/inference_results_humc/{model}_{augmentation}/predictions/
+    data/results/predictions/humc/__ALL_foldwise_results.csv
+    data/results/predictions/humc/__ALL_summary_results.csv
+    data/results/predictions/humc/{model}_{augmentation}/predictions/
 """
 
 from __future__ import annotations
