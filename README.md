@@ -4,23 +4,6 @@ This repository is the publication-ready code package for four-class pressure in
 
 The public PIID and Kaggle images must be downloaded from their original providers. HUMC is a private hospital dataset: no HUMC image, patient identifier, label workbook, or image-level split table is included. Authorized investigators can place HUMC locally and run the same public code without editing source paths.
 
-## Reproducibility scope
-
-| Component | Included | Notes |
-|---|---:|---|
-| PIID/Kaggle curation and exact exclusion lists | Yes | 20 duplicate pairs and 28 excluded images are documented |
-| Center-square crop and 224 x 224 resize | Yes | Applied before training and evaluation |
-| PIID split and fold normalization | Yes | Released split tables, seed 40 |
-| HUMC patient-level workflow | Code only | Aggregate split metadata and normalization are public; identifiers are private |
-| Six architectures x 17 conditions x five folds | Yes | PIID-trained and HUMC-trained entry points |
-| Internal and external validation | Yes | PIID, HUMC when locally authorized, and Kaggle |
-| No-ensemble fold-wise bootstrap | Yes | Five fold-specific models remain separate |
-| Friedman--Iman-Davenport--Nemenyi analysis | Yes | Dataset-specific architecture analysis |
-| Critical-difference, Sankey, ROC, confusion, heatmap figures | Yes | Generated from fold-wise prediction files |
-| ResNet-18 feature extraction/UMAP | Yes | Checkpoint checksum and transforms documented |
-| HUMC clinical data | No | Not shareable |
-| Trained weights and generated predictions | No | Recreate locally or distribute separately under an approved data/model agreement |
-
 ## Environment
 
 The curated environment uses Python 3.11 and the study versions:
