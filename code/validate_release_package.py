@@ -109,6 +109,13 @@ def main() -> None:
     if "numpy==1.26.4" not in umap_requirements or "umap-learn==0.5.6" not in umap_requirements:
         failures.append("UMAP environment is not locked as expected")
 
+    feature_source = (ROOT / "code/analysis/extract_resnet18_features.py").read_text(encoding="utf-8")
+    duplicate_source = (ROOT / "code/data_curation/screen_duplicate_candidates.py").read_text(encoding="utf-8")
+    if "transforms.Resize((224, 224))" not in feature_source or "transforms.Resize(256)" in feature_source:
+        failures.append("manuscript feature extraction must resize directly to 224 x 224")
+    if "transforms.Resize(256)" not in duplicate_source or "transforms.CenterCrop(224)" not in duplicate_source:
+        failures.append("duplicate screening must use short-side 256 resize and 224 center crop")
+
     for relative in (
         "code/pipeline/train_piid_6models_17augmentations.py",
         "code/pipeline/train_humc_6models_17augmentations.py",
@@ -193,6 +200,7 @@ def main() -> None:
     print(" - 17 training conditions in each training entry point")
     print(" - 20 duplicate pairs; 10 PIID and 18 Kaggle exclusions")
     print(" - PyTorch 2.9.0 / TorchVision 0.24.0 and two environment contracts locked")
+    print(" - ResNet-18 feature and duplicate-screen preprocessing contracts verified")
     print(" - no prohibited personal/server paths or legacy test references")
 
 

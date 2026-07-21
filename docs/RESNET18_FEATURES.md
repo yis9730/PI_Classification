@@ -1,7 +1,10 @@
-# ResNet-18 feature extraction
+# ResNet-18 workflows
 
-All feature-based analyses used a frozen ImageNet-pretrained ResNet-18 encoder
-with a 512-dimensional pooled output. The exact study checkpoint is expected at:
+The manuscript feature-space analysis and the separate duplicate-candidate
+screen used the same frozen ResNet-18 encoder and study checkpoint, but they did
+not use the same image preprocessing or feature postprocessing.
+
+The expected checkpoint path is:
 
 `data/results/checkpoints/feature_extractors/resnet18.pth`
 
@@ -9,18 +12,35 @@ SHA-256:
 
 `69E2B9D2711F7CFB70B67091D16027EFAA781BCE78E1084A780AC1D1839B82F9`
 
-The 44.8 MB checkpoint is not committed to avoid duplicating pretrained model
-weights. A user must obtain the authorized study checkpoint and verify the hash.
+The 44.8 MB checkpoint is not committed. A user must obtain the authorised
+study checkpoint separately and verify its hash.
 
-Two intentional processing modes were used:
+## Manuscript feature-space workflow
 
-1. Duplicate candidate screening: resize the shorter side to 256, center-crop
-   224 x 224, apply ImageNet normalization, and L2-normalize the 512-D vector.
-2. Exploratory feature-space analysis: directly resize to 224 x 224, apply
-   ImageNet normalization, and retain the raw pooled 512-D vector. The same raw
-   vectors feed UMAP, silhouette, centroid-distance, and representative-image
-   selection.
+Main Figure 3 (UMAP), Main Table 3 (feature-space distances), Main Figure 4
+(centroid-nearest representatives), and the silhouette analysis all use the
+vectors exported by `code/analysis/extract_resnet18_features.py`:
 
-The duplicate screen and the exploratory feature analysis therefore use the
-same frozen encoder and weights but different, documented preprocessing and
-postprocessing appropriate to their respective analyses.
+1. directly resize each RGB image to `224 x 224` with
+   `transforms.Resize((224, 224))`;
+2. apply ImageNet mean/std normalisation;
+3. retain the raw pooled 512-dimensional vector without L2 normalisation.
+
+There is **no intermediate resize to 256 and no centre crop** in this
+manuscript feature-space workflow.
+
+## Separate duplicate-candidate screen
+
+`code/data_curation/screen_duplicate_candidates.py` reproduces a distinct data
+curation step:
+
+1. `transforms.Resize(256)` resizes the shorter image side to 256 while
+   preserving aspect ratio; it does not forcibly reshape every image to
+   `256 x 256`;
+2. `transforms.CenterCrop(224)` extracts the central `224 x 224` region;
+3. ImageNet mean/std normalisation is applied;
+4. the pooled 512-dimensional vector is L2-normalised for cosine screening.
+
+This 256/centre-crop route belongs only to duplicate-candidate screening. It is
+not used to generate UMAP, silhouette, centroid-distance, or representative-
+image results.

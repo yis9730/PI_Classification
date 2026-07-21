@@ -73,7 +73,9 @@ HUMC training and external validation use the same entry points with `humc` in t
 
 ## Feature workflow: Main Figures 3–4 and Table 3
 
-First export the shared ResNet-18 feature vectors in the main environment:
+These manuscript analyses resize images directly to `224 x 224`; they do not
+use the separate duplicate-screening `Resize(256)`/centre-crop route. First
+export the shared ResNet-18 feature vectors in the main environment:
 
 ```bash
 python code/analysis/extract_resnet18_features.py --dataset PIID=data/piid --dataset Kaggle=data/kaggle --output-dir data/results/tables/feature_space/features
