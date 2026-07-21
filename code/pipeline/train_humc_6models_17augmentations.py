@@ -45,9 +45,9 @@ from tqdm import tqdm
 
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
-DEVELOPMENT_DIR = CODE_ROOT / "development"
-if str(DEVELOPMENT_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVELOPMENT_DIR))
+CORE_DIR = CODE_ROOT / "core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
 from model_pipeline_utils import get_model  # noqa: E402
 from path_config import (  # noqa: E402
@@ -197,7 +197,7 @@ def load_split_files() -> tuple[pd.DataFrame, dict, dict]:
     if not trainval_csv.exists() or not fold_json.exists() or not norm_csv.exists():
         raise FileNotFoundError(
             "Private HUMC split files are missing. Run "
-            "code/experiment/dataset_split_normalization_humc_patient_level.py "
+            "code/pipeline/dataset_split_normalization_humc_patient_level.py "
             "inside the authorized environment first."
         )
 

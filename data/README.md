@@ -5,14 +5,14 @@ data/
   piid/       prepared PIID images
   kaggle/     prepared Kaggle images
   humc/       private HUMC images and labels
-  splits/     released split information
+  splits/     released PIID split information
   results/    generated outputs
   templates/  example input files
 ```
 
 PIID and Kaggle images are prepared with `code/data_curation/prepare_public_datasets.py`. Source downloads may be stored anywhere; the script writes center-cropped 224 x 224 images to `data/piid` and `data/kaggle`.
 
-HUMC data remain local and are ignored by Git. Only privacy-safe aggregate split metadata and fold-wise normalization values are public.
+HUMC data and every HUMC-derived split/normalisation file remain local and are ignored by Git. The public package contains neither HUMC aggregate metadata nor an input template; investigators with authorised access create these local inputs according to their institutional data-governance process.
 
 Sources:
 

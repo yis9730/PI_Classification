@@ -1,8 +1,8 @@
-"""Analyze the shared raw 512-D ResNet-18 feature vectors.
+"""Calculate non-visual statistics from raw 512-D ResNet-18 feature vectors.
 
-Outputs include UMAP coordinates, silhouette coefficients, centroid distances,
-stage-stratified dataset distances, and the three nearest images to each
-dataset-by-stage centroid. The analysis is exploratory and uses seed 40.
+Outputs include silhouette coefficients, centroid distances, and the three
+nearest images to each dataset-by-stage centroid. UMAP coordinate generation
+and plotting intentionally live in ``code/visualization/plot_umap.py``.
 """
 
 from __future__ import annotations
@@ -11,13 +11,9 @@ import argparse
 import itertools
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import umap
 from sklearn.metrics import silhouette_score
-
-RANDOM_SEED = 40
 
 
 def load_feature_sets(root: Path, datasets: list[str]) -> tuple[np.ndarray, pd.DataFrame]:
@@ -103,31 +99,11 @@ def representative_rows(features: np.ndarray, metadata: pd.DataFrame, n: int = 3
     return pd.DataFrame(rows)
 
 
-def plot_umap(embedding: np.ndarray, metadata: pd.DataFrame, output: Path) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5))
-    for dataset in metadata["dataset"].drop_duplicates():
-        mask = metadata["dataset"].eq(dataset).to_numpy()
-        axes[0].scatter(embedding[mask, 0], embedding[mask, 1], s=8, alpha=0.65, label=dataset)
-    for stage in range(1, 5):
-        mask = metadata["stage"].eq(stage).to_numpy()
-        axes[1].scatter(embedding[mask, 0], embedding[mask, 1], s=8, alpha=0.65, label=f"Stage {stage}")
-    axes[0].set_title("Dataset source")
-    axes[1].set_title("Clinical stage")
-    for axis in axes:
-        axis.set_xlabel("UMAP 1")
-        axis.set_ylabel("UMAP 2")
-        axis.legend(frameon=False)
-    fig.tight_layout()
-    fig.savefig(output, dpi=300, bbox_inches="tight")
-    plt.close(fig)
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--feature-root", type=Path, required=True)
     parser.add_argument("--datasets", nargs="+", default=["PIID", "HUMC", "Kaggle"])
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--metric", default="euclidean", choices=["euclidean", "cosine"])
     return parser.parse_args()
 
 
@@ -156,18 +132,7 @@ def main() -> None:
         args.output_dir / "centroid_representatives.csv", index=False
     )
 
-    reducer = umap.UMAP(
-        n_components=2,
-        metric=args.metric,
-        random_state=RANDOM_SEED,
-    )
-    embedding = reducer.fit_transform(features)
-    embedding_table = metadata.copy()
-    embedding_table["umap_1"] = embedding[:, 0]
-    embedding_table["umap_2"] = embedding[:, 1]
-    embedding_table.to_csv(args.output_dir / "umap_coordinates.csv", index=False)
-    plot_umap(embedding, metadata, args.output_dir / "umap_dataset_and_stage.png")
-    print(f"[DONE] Feature-space outputs written to {args.output_dir}")
+    print(f"[DONE] Feature-space statistics written to {args.output_dir}")
 
 
 if __name__ == "__main__":

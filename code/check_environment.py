@@ -23,7 +23,7 @@ REQUIRED_PACKAGES = {
     "albumentations": "1.4",
     "cv2": "4.12",
     "PIL": "12.",
-    "numpy": "1.26",
+    "numpy": "2.2",
     "pandas": "3.0",
     "sklearn": "1.7",
     "scipy": "1.14",

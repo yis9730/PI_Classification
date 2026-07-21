@@ -1,23 +1,15 @@
-# HUMC private-data boundary
+# HUMC controlled-data boundary
 
-HUMC contains non-public hospital images and patient-linked metadata. This repository releases executable code but must not contain:
+HUMC is not an open dataset. This public repository intentionally contains no HUMC image, thumbnail, label file, patient or encounter identifier, split membership, normalisation statistic, aggregate cohort metadata, feature vector, checkpoint, or prediction file.
 
-- clinical images or thumbnails;
-- label workbooks;
-- patient or encounter identifiers;
-- image-level train/test tables;
-- fold membership files that expose image or patient membership;
-- prediction files containing private image paths.
+The paper reports the HUMC cohort and its results. Reproducing the HUMC-dependent portions of the study requires a separate institutional authorisation process and a local controlled-data workspace. This repository is not a data-access mechanism.
 
-Authorized local layout:
+An authorised project member keeps all controlled inputs and outputs outside Git, including local files under these ignored locations:
 
 ```text
-data/humc/{1,2,3,4}/
-data/humc/labels.xlsx
+data/humc/
+data/splits/humc/
+data/results/
 ```
 
-The analytic HUMC images must undergo the same orientation correction, center-square crop around the midpoint of the long axis, and 224 x 224 resize as the public datasets before split generation or model use.
-
-The public aggregate record reports 1,844 images from 500 patients, with 1,556 images/425 patients in train-validation and 288 images/75 patients in the held-out test. The held-out split and five folds are patient-disjoint. Only `split_meta_public.json` and `normalization_stats.csv` are released.
-
-The default patient identifier column is `등록번호`; command-line arguments permit a site-local schema without source edits. All HUMC local files and outputs should be reviewed again before any public commit.
+The HUMC pipeline is retained so an authorised holder can execute the same patient-grouped split, training, and evaluation logic locally. Before any future public release, confirm that no HUMC-derived file is staged, including aggregate JSON/CSV summaries and normalisation values.

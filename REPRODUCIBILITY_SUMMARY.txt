@@ -1,10 +1,11 @@
 PRESSURE INJURY CLASSIFICATION: PUBLIC REPRODUCIBILITY SUMMARY
 
 Environment
-- Python 3.11
-- PyTorch 2.9.0
-- TorchVision 0.24.0
-- timm 1.0.22
+- Two intentionally separate environments; see docs/ENVIRONMENTS.md
+- main environment: Python 3.11, PyTorch 2.9.0, TorchVision 0.24.0, timm 1.0.22,
+  NumPy 2.2.6, OpenCV 4.12.0.88
+- umap: NumPy 1.26.4, numba 0.60.0, umap-learn 0.5.6; used only after
+  ResNet-18 feature export to draw Main Figure 3
 - Study base random seed: 40
 - Train/test and five-fold partition random seed: 40
 - DataLoader shuffle generator: 40 + fold index (fold-local ordering only)
@@ -49,6 +50,8 @@ Analysis
 - Fold-averaged confusion Sankey visualization
 - Frozen ResNet-18 512-dimensional feature workflow; see
   docs/RESNET18_FEATURES.md for the required checkpoint SHA-256
+- Main-artifact command and access contract: docs/MAIN_ARTIFACTS.md
+- End-to-end execution order: docs/REPRODUCTION_WORKFLOW.md
 
 Before publication
 - Run: python code/validate_release_package.py

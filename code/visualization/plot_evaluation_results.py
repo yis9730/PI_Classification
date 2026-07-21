@@ -13,9 +13,9 @@ from sklearn.metrics import auc, confusion_matrix, roc_curve
 from sklearn.preprocessing import label_binarize
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
-DEVELOPMENT_DIR = CODE_ROOT / "development"
-if str(DEVELOPMENT_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVELOPMENT_DIR))
+CORE_DIR = CODE_ROOT / "core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
 from path_config import FIGURE_ROOT, HUMC_INFERENCE_DIR, PIID_INFERENCE_DIR  # noqa: E402
 

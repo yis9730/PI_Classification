@@ -45,8 +45,7 @@
       "PIID internal test",
       "HUMC external",
       "Kaggle external"
-    ],
-    "do_not_mix_with": "data/splits/humc/normalization_stats.csv"
+    ]
   },
   "handover_update": {
     "date": "2026-07-01",
