@@ -29,13 +29,16 @@ python code/check_checkpoint_compatibility.py
 
 ## Data preparation
 
-Download PIID and Kaggle from their original providers. The source folders may be stored anywhere; prepare them with:
+Download and extract the public datasets from their original pages:
+
+- [PIID original download](https://drive.google.com/drive/u/0/folders/12JouktrzXIo6ywpSe2OYWRYNNIxlEKvK): use the folder containing stage subfolders `1`, `2`, `3`, and `4`.
+- [Kaggle Pressure Ulcers Stages](https://www.kaggle.com/datasets/sinemgokoz/pressure-ulcers-stages): use the folder containing `Stage_I`, `Stage_II`, `Stage_III`, and `Stage_IV`.
+
+The downloaded folders may be stored anywhere. Prepare them with:
 
 ```bash
 python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite
 ```
-
-The PIID source folder must contain `1` through `4`; the Kaggle source folder must contain `Stage_I` through `Stage_IV`.
 
 Prepared images are saved in `data/piid` and `data/kaggle`. For every image, EXIF orientation is first corrected. The largest possible square is then cropped from the image center: `side = min(width, height)`, with the crop centered on the midpoint of the long axis. The square is resized to 224 x 224. This is the image representation used by the training and evaluation pipelines.
 
