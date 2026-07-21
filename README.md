@@ -21,12 +21,6 @@ python code/check_environment.py
 
 GPU, CUDA, cuDNN, and deterministic-kernel differences can cause small numerical variation. The model/split configuration is fixed in the released scripts.
 
-Existing local weights can be checked without training or inference:
-
-```bash
-python code/check_checkpoint_compatibility.py
-```
-
 ## Data preparation
 
 Download and extract the public datasets from their original pages:
@@ -72,6 +66,8 @@ python code/experiment/train_piid_6models_17augmentations.py
 python code/experiment/train_humc_6models_17augmentations.py
 ```
 
+Study-trained classification weights are not distributed in this repository. These commands train new fold-specific weights locally. PIID-trained weights are saved under `data/results/checkpoints/piid_trained`; authorized HUMC training writes to `data/results/checkpoints/humc_trained`.
+
 The default optimizer is AdamW, with weighted cross entropy, batch size 16, learning rate `1e-5`, weight decay `1e-4`, at most 50 epochs, and early-stopping patience 20. The study random seed is fixed at 40. The original fold-specific `DataLoader` shuffle sequence is reproduced with generator seed `40 + fold_id`; this does not change the study-wide seed or the five-fold partition seed.
 
 A quick code-path check is available with:
@@ -81,6 +77,8 @@ python code/experiment/train_piid_6models_17augmentations.py --models resnet50 -
 ```
 
 ## Internal and external evaluation
+
+Run evaluation after the corresponding training step. The scripts automatically load the newly generated local weights from `data/results/checkpoints`.
 
 ```bash
 # PIID-trained models: PIID internal test, Kaggle, and optional local HUMC

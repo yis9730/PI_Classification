@@ -1,13 +1,13 @@
-# Model weights
+# Locally generated model weights
 
-The study workstation archive was checked against the public loading convention without copying weights into this repository.
+Study-trained classification weights are not distributed in this repository. Visitors recreate them by downloading the permitted data and running the public training scripts. A complete local recreation produces:
 
 | Training source | Run folders | Fold weights | Expected structure |
 |---|---:|---:|---|
 | PIID | 102 | 510 | 6 architectures x 17 conditions x 5 folds |
 | HUMC | 102 | 510 | 6 architectures x 17 conditions x 5 folds |
 
-Expected local placement:
+Training and evaluation use this local layout:
 
 ```text
 data/results/checkpoints/
@@ -27,4 +27,4 @@ TorchVision EfficientNetV2-S implementation
 -> Linear(C, C/2) -> ReLU -> Dropout(0.5) -> Linear(C/2, 4)
 ```
 
-The large weights are excluded by `.gitignore`. If they are distributed separately, provide a versioned model archive and its checksums under an approved license/data agreement. The ResNet-18 feature checkpoint checksum is recorded in `RESNET18_FEATURES.md`.
+All newly generated classification weights remain local and are excluded by `.gitignore`. The evaluation scripts load them directly from this structure. The separate ResNet-18 feature checkpoint checksum is recorded in `RESNET18_FEATURES.md`.
