@@ -1,19 +1,10 @@
-# Generated results
+# Results
 
-Training, evaluation, analysis, and visualization scripts create this structure locally:
+Scripts write generated files under `data/results`:
 
-```text
-data/results/
-  checkpoint/
-    piid_trained/
-    humc_trained/
-    feature_extractors/resnet18.pth
-  source_archives/
-    inference_results_piid/
-    inference_results_humc/
-    resnet18_features/
-  table/
-  figure/
-```
+- `checkpoints/`: model weights
+- `predictions/`: fold-wise evaluation outputs
+- `tables/`: statistical results
+- `figures/`: generated figures
 
-Checkpoints and generated image-level outputs are excluded from Git. Review all HUMC-derived files for privacy before any separate controlled distribution.
+These files are excluded from Git. Review all HUMC-derived outputs for privacy before any controlled distribution.

@@ -12,8 +12,8 @@ HUMC contains non-public hospital images and patient-linked metadata. This repos
 Authorized local layout:
 
 ```text
-data/processed/analytic_data/HUMC/{1,2,3,4}/
-data/private/HUMC/labels/humc_labels.xlsx
+data/humc/{1,2,3,4}/
+data/humc/labels.xlsx
 ```
 
 The analytic HUMC images must undergo the same orientation correction, center-square crop around the midpoint of the long axis, and 224 x 224 resize as the public datasets before split generation or model use.

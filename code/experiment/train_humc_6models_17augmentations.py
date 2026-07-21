@@ -7,7 +7,7 @@ and split files in the documented paths before running this script.
 
 Default experiment:
 
-    - Dataset: HUMC train/validation folds from data/splits/humc_patient_level
+    - Dataset: HUMC train/validation folds from data/splits/humc
     - Backbones: Swin-Tiny, EfficientNetV2-S, ViT-B/16, ResNet-50,
       DenseNet-121, ConvNeXt-S
     - Augmentation settings: 17 settings, exp00_NoAug through

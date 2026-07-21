@@ -6,10 +6,10 @@ This script does three things:
 2. Excludes duplicate or near-duplicate files listed in the released manifests.
 3. Center-crops each image to a square and resizes it to 224 x 224 by default.
 
-It never deletes files from data/raw. The generated dataset is written to:
+It never deletes source images. The generated datasets are written to:
 
-    data/processed/analytic_data/PIID/{1,2,3,4}
-    data/processed/analytic_data/Kaggle/{1,2,3,4}
+    data/piid/{1,2,3,4}
+    data/kaggle/{1,2,3,4}
 
 Expected final counts:
 
@@ -105,7 +105,7 @@ def reset_output_dir(output_dir: Path, overwrite: bool) -> None:
 
 
 def build_piid(
-    raw_root: Path,
+    source_root: Path,
     output_root: Path,
     exclusion_csv: Path,
     image_size: int,
@@ -113,10 +113,10 @@ def build_piid(
     """Build PIID analytic stage folders and return a manifest DataFrame."""
     exclusions = read_exclusions(exclusion_csv, ("stage", "filename"))
     records: list[dict[str, object]] = []
-    piid_output = output_root / "PIID"
+    piid_output = output_root / "piid"
 
     for stage, folder_name in PIID_STAGE_FOLDERS.items():
-        src_dir = raw_root / folder_name
+        src_dir = source_root / folder_name
         dst_dir = piid_output / stage
         images = iter_images(src_dir)
 
@@ -150,7 +150,7 @@ def build_piid(
 
 
 def build_kaggle(
-    raw_root: Path,
+    source_root: Path,
     output_root: Path,
     exclusion_csv: Path,
     image_size: int,
@@ -158,10 +158,10 @@ def build_kaggle(
     """Build Kaggle analytic stage folders and return a manifest DataFrame."""
     exclusions = read_exclusions(exclusion_csv, ("stage", "source_folder", "filename"))
     records: list[dict[str, object]] = []
-    kaggle_output = output_root / "Kaggle"
+    kaggle_output = output_root / "kaggle"
 
     for stage, source_folder in KAGGLE_STAGE_FOLDERS.items():
-        src_dir = raw_root / source_folder
+        src_dir = source_root / source_folder
         dst_dir = kaggle_output / stage
         images = iter_images(src_dir)
 
@@ -199,7 +199,7 @@ def build_kaggle(
 def validate_counts(output_root: Path) -> None:
     """Validate final stage-wise counts against the published reproduction target."""
     for dataset, expected in EXPECTED_COUNTS.items():
-        dataset_root = output_root / dataset
+        dataset_root = output_root / dataset.lower()
         total = 0
         for stage in ["1", "2", "3", "4"]:
             stage_dir = dataset_root / stage
@@ -216,34 +216,27 @@ def validate_counts(output_root: Path) -> None:
         print(f"[OK] {dataset}: {total} images")
 
 
-def parse_args() -> argparse.Namespace:
-    root = repo_root()
-    return argparse.ArgumentParser(
-        description="Prepare public PIID and Kaggle analytic datasets."
-    ).parse_args()
-
-
 def build_arg_parser() -> argparse.ArgumentParser:
     root = repo_root()
     parser = argparse.ArgumentParser(
         description="Prepare public PIID and Kaggle analytic datasets."
     )
     parser.add_argument(
-        "--piid-raw",
+        "--piid-source",
         type=Path,
-        default=root / "data" / "raw" / "PIID" / "original_images",
+        required=True,
         help="Folder containing PIID stage folders 1/2/3/4.",
     )
     parser.add_argument(
-        "--kaggle-raw",
+        "--kaggle-source",
         type=Path,
-        default=root / "data" / "raw" / "Kaggle" / "original_images",
+        required=True,
         help="Folder containing Kaggle Stage_I/Stage_II/Stage_III/Stage_IV folders.",
     )
     parser.add_argument(
         "--output-root",
         type=Path,
-        default=root / "data" / "processed" / "analytic_data",
+        default=root / "data",
         help="Output root for PIID and Kaggle analytic datasets.",
     )
     parser.add_argument(
@@ -255,7 +248,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Delete existing output PIID/Kaggle folders before rebuilding.",
+        help="Delete existing output piid/kaggle folders before rebuilding.",
     )
     return parser
 
@@ -265,20 +258,20 @@ def main() -> None:
     args = build_arg_parser().parse_args()
 
     output_root = args.output_root
-    reset_output_dir(output_root / "PIID", args.overwrite)
-    reset_output_dir(output_root / "Kaggle", args.overwrite)
+    reset_output_dir(output_root / "piid", args.overwrite)
+    reset_output_dir(output_root / "kaggle", args.overwrite)
 
-    manifest_dir = root / "data" / "processed"
+    manifest_dir = root / "data" / "results" / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
 
     piid_manifest = build_piid(
-        raw_root=args.piid_raw,
+        source_root=args.piid_source,
         output_root=output_root,
         exclusion_csv=root / "code" / "data_curation" / "piid_duplicate_exclusions.csv",
         image_size=args.image_size,
     )
     kaggle_manifest = build_kaggle(
-        raw_root=args.kaggle_raw,
+        source_root=args.kaggle_source,
         output_root=output_root,
         exclusion_csv=root / "code" / "data_curation" / "kaggle_duplicate_exclusions.csv",
         image_size=args.image_size,
@@ -293,4 +286,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

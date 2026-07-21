@@ -10,7 +10,7 @@ The study workstation archive was checked against the public loading convention 
 Expected local placement:
 
 ```text
-data/results/checkpoint/
+data/results/checkpoints/
   piid_trained/{backbone}_Baseline_{augmentation}_bs16_lr1e-05_wd1e-04/
     best_models_weights/best_model_fold_{1..5}.pth
   humc_trained/{backbone}_Baseline_{augmentation}_bs16_lr1e-05_wd1e-04/

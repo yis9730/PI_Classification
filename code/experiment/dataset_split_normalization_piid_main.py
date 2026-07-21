@@ -5,12 +5,12 @@ Because PIID does not provide patient identifiers, the split unit is the image.
 
 Outputs:
 
-    data/splits/piid_main/piid_all_images.csv
-    data/splits/piid_main/piid_trainval_set.csv
-    data/splits/piid_main/piid_test_set.csv
-    data/splits/piid_main/piid_fold_indices.json
-    data/splits/piid_main/piid_split_meta.json
-    data/splits/piid_main/normalization_stats.csv
+    data/splits/piid/piid_all_images.csv
+    data/splits/piid/piid_trainval_set.csv
+    data/splits/piid/piid_test_set.csv
+    data/splits/piid/piid_fold_indices.json
+    data/splits/piid/piid_split_meta.json
+    data/splits/piid/normalization_stats.csv
 
 Split rule:
 
@@ -230,4 +230,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

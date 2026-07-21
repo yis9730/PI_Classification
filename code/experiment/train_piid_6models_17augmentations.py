@@ -5,7 +5,7 @@ released PIID split files.
 
 Default experiment:
 
-    - Dataset: PIID train/validation folds from data/splits/piid_main
+    - Dataset: PIID train/validation folds from data/splits/piid
     - Backbones: Swin-Tiny, EfficientNetV2-S, ViT-B/16, ResNet-50,
       DenseNet-121, ConvNeXt-S
     - Augmentation settings: 17 settings, exp00_NoAug through
