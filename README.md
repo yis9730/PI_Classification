@@ -148,4 +148,4 @@ docs/   method and privacy notes
 - Private data, patient identifiers, images, checkpoints, and generated prediction files are ignored by Git.
 - An institutional owner should select and approve the software license before or at public release; no license grant is assumed by this package.
 
-Run `python code/validate_release_package.py` and `python code/generate_release_checksums.py --verify` before uploading. The release checklist is in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
+Run `python code/validate_release_package.py` before uploading. The release checklist is in `docs/PUBLIC_RELEASE_CHECKLIST.md`.

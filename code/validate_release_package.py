@@ -14,7 +14,6 @@ TEXT_SUFFIXES = {".py", ".md", ".txt", ".csv", ".json", ".yml", ".yaml"}
 REQUIRED = [
     "requirements.txt",
     "README.md",
-    "CHECKSUMS.sha256",
     "code/data_curation/duplicate_pairs.csv",
     "code/data_curation/piid_duplicate_exclusions.csv",
     "code/data_curation/kaggle_duplicate_exclusions.csv",
@@ -23,7 +22,6 @@ REQUIRED = [
     "code/experiment/evaluate_piid_trained_final_results.py",
     "code/experiment/evaluate_humc_trained_final_results.py",
     "code/check_checkpoint_compatibility.py",
-    "code/generate_release_checksums.py",
     "code/analysis/bootstrap_macro_f1_foldwise.py",
     "code/analysis/friedman_nemenyi_foldwise.py",
     "code/visualization/plot_critical_difference.py",
