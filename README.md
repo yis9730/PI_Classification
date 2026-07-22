@@ -50,8 +50,8 @@ python code/pipeline/dataset_split_normalization_piid_main.py --use-existing
 The curation script applies the released duplicate exclusions. Retained PIID
 files are copied unchanged. Retained Kaggle images are centre-cropped on the
 longer axis to their native square size, matching the study's 141-image
-external-validation set; this step does not resize them to 256 or 224 pixels.
-The model pipeline later maps both datasets to `224 x 224` in memory with
+external-validation set. The model pipeline later maps both datasets to
+`224 x 224` in memory with
 Albumentations. The script validates the target counts (PIID 1,081; Kaggle
 141) and rejects source/output overlap, unexpected raw counts, and unmatched
 exclusion entries.
