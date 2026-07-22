@@ -5,7 +5,7 @@ The project uses two pinned environments because the recorded workflows have inc
 | Environment | Requirements file | Purpose | Key compatibility constraint |
 |---|---|---|---|
 | Main environment | `requirements_train_eval.txt` | curation, split generation, training, evaluation, statistical analysis, Sankey, centroid montage | NumPy 2.2.6 with OpenCV 4.12.0.88 |
-| `umap` | `requirements_umap_analysis.txt` | Main Figure 3 UMAP from pre-exported features | NumPy 1.26.4 with numba 0.60.0 and UMAP 0.5.6 |
+| UMAP environment | `requirements_umap_analysis.txt` | Main Figure 3 UMAP from pre-exported features | NumPy 1.26.4 with numba 0.60.0 and UMAP 0.5.6 |
 
 ## Create the main environment
 
@@ -17,18 +17,22 @@ python -m pip install -r requirements_train_eval.txt
 python code/check_environment.py
 ```
 
-Use this environment for every script except `code/visualization/plot_umap.py`. It is the default selected by `requirements.txt`.
+Use this environment for every script except `code/visualization/plot_umap.py`. It is the environment selected by `requirements.txt`.
 
-## Create `umap`
+## Create the UMAP environment
 
 ```bash
 python -m venv .venv-umap
 .\.venv-umap\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements_umap_analysis.txt
+python code/check_environment.py --environment umap
 ```
 
-The UMAP environment consumes only `features.npy` and `metadata.csv` previously written by `code/analysis/extract_resnet18_features.py`; it does not train a model, load a checkpoint, or alter the numerical feature-space tables.
+The UMAP environment consumes `features.npy`, `metadata.csv`, and their
+validated `extraction.json` provenance previously written by
+`code/analysis/extract_resnet18_features.py`; it does not train a model,
+download weights, or alter the numerical feature-space tables.
 
 ## Why this separation is required
 

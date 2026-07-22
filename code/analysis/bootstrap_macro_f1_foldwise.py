@@ -3,13 +3,16 @@
 For every resample, macro-F1 is calculated separately for each of the five
 fixed fold-specific models and then averaged. Predictions or probabilities are
 never combined across folds. The same sampled image indices are used for every
-fold and architecture within a dataset. The study used 1,000 resamples and
-random seed 40.
+fold and architecture within a dataset. The study used 1,000 resamples, the
+legacy NumPy ``RandomState`` sampler, and random seed 40. Keeping that sampler
+is necessary to reproduce the reported percentile endpoints from the archived
+prediction tables.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -57,19 +60,58 @@ CONFIGS = {
         "datasets": ["HUMC_Test", "PIID", "Kaggle"],
     },
 }
+EXPECTED_COHORTS = {
+    "PIID_Test": (163, (35, 47, 41, 40)),
+    "HUMC": (1844, (233, 709, 575, 327)),
+    "Kaggle": (141, (27, 46, 41, 27)),
+    "HUMC_Test": (288, (30, 104, 100, 54)),
+    "PIID": (1081, (229, 311, 273, 268)),
+}
 
 
-def normalize_labels(values: pd.Series) -> np.ndarray:
-    labels = values.astype(int).to_numpy()
-    unique = set(np.unique(labels).tolist())
-    if unique <= {0, 1, 2, 3}:
-        return labels
-    if unique <= {1, 2, 3, 4}:
-        return labels - 1
-    raise ValueError(f"Expected four-class labels, observed {sorted(unique)}")
+def atomic_to_csv(table: pd.DataFrame, path: Path, **kwargs: object) -> None:
+    """Replace one CSV only after its complete temporary file is written."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        table.to_csv(temporary, **kwargs)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
-def load_folds(root: Path, model: str, dataset: str) -> list[dict[str, np.ndarray]]:
+def _integer_array(values: pd.Series, label: str) -> np.ndarray:
+    numeric = pd.to_numeric(values, errors="coerce").to_numpy(dtype=float)
+    if not np.isfinite(numeric).all() or not np.equal(numeric, np.floor(numeric)).all():
+        raise ValueError(f"{label} must contain finite integer labels")
+    return numeric.astype(int)
+
+
+def normalize_labels(
+    true_values: pd.Series, predicted_values: pd.Series
+) -> tuple[np.ndarray, np.ndarray]:
+    """Infer one unambiguous label offset from truth and apply it to predictions."""
+    true_raw = _integer_array(true_values, "true_label")
+    predicted_raw = _integer_array(predicted_values, "predicted_label")
+    observed = set(np.unique(true_raw).tolist())
+    if 0 in observed and observed <= set(LABELS):
+        offset = 0
+    elif 4 in observed and observed <= {1, 2, 3, 4}:
+        offset = 1
+    else:
+        raise ValueError("Ambiguous true_label encoding; expected all four study stages")
+    true = true_raw - offset
+    predicted = predicted_raw - offset
+    if set(np.unique(true)) != set(LABELS):
+        raise ValueError("Each evaluation table must contain all four true stages")
+    if not set(np.unique(predicted)).issubset(set(LABELS)):
+        raise ValueError("predicted_label uses a different or invalid encoding")
+    return true, predicted
+
+
+def load_folds(
+    root: Path, model: str, dataset: str
+) -> tuple[list[dict[str, np.ndarray]], np.ndarray]:
     prediction_dir = root / f"{model}_exp00_NoAug" / "predictions"
     folds = []
     reference_paths = None
@@ -82,15 +124,33 @@ def load_folds(root: Path, model: str, dataset: str) -> list[dict[str, np.ndarra
         required = {"image_path", "true_label", "predicted_label"}
         if not required <= set(table.columns):
             raise ValueError(f"Missing columns in {path}: {sorted(required - set(table.columns))}")
-        image_paths = table["image_path"].astype(str).to_numpy()
-        y_true = normalize_labels(table["true_label"])
-        y_pred = normalize_labels(table["predicted_label"])
+        if table.empty or table["image_path"].isna().any():
+            raise ValueError("Prediction table is empty or contains a blank image_path")
+        table["image_path"] = table["image_path"].astype(str)
+        if table["image_path"].str.strip().eq("").any() or table["image_path"].duplicated().any():
+            raise ValueError("Prediction table contains blank or duplicate image paths")
+        table = table.sort_values("image_path", kind="stable").reset_index(drop=True)
+        image_paths = table["image_path"].to_numpy()
+        y_true, y_pred = normalize_labels(table["true_label"], table["predicted_label"])
+        expected_n, expected_stage_counts = EXPECTED_COHORTS[dataset]
+        observed_stage_counts = tuple(
+            np.bincount(y_true, minlength=len(LABELS)).astype(int).tolist()
+        )
+        if len(y_true) != expected_n or observed_stage_counts != expected_stage_counts:
+            raise ValueError(
+                f"Unexpected {dataset} cohort in {path}: expected n={expected_n}, "
+                f"stages={expected_stage_counts}; observed n={len(y_true)}, "
+                f"stages={observed_stage_counts}"
+            )
         if reference_paths is None:
             reference_paths, reference_true = image_paths, y_true
         elif not np.array_equal(reference_paths, image_paths) or not np.array_equal(reference_true, y_true):
             raise ValueError(f"Fold alignment mismatch: {model}, {dataset}, fold {fold_id}")
         folds.append({"y_true": y_true, "y_pred": y_pred})
-    return folds
+    if reference_paths is None or reference_true is None or len(folds) != N_FOLDS:
+        raise RuntimeError(f"Expected exactly {N_FOLDS} aligned folds")
+    signature = np.column_stack([reference_paths, reference_true.astype(str)])
+    return folds, signature
 
 
 def macro_f1(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -137,21 +197,42 @@ def forest_plot(table: pd.DataFrame, title: str, output: Path) -> None:
     axis.grid(axis="x", alpha=0.25)
     fig.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output, dpi=300, bbox_inches="tight")
-    plt.close(fig)
+    temporary = output.with_name(f".{output.stem}.{os.getpid()}.tmp{output.suffix}")
+    try:
+        fig.savefig(temporary, dpi=300, bbox_inches="tight")
+        os.replace(temporary, output)
+    finally:
+        plt.close(fig)
+        temporary.unlink(missing_ok=True)
 
 
-def run_configuration(key: str, n_bootstrap: int, seed: int) -> None:
+def analyze_configuration(
+    key: str, n_bootstrap: int, seed: int
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     config = CONFIGS[key]
+    if n_bootstrap <= 0:
+        raise ValueError("--n-bootstrap must be positive")
     summary_rows = []
     fold_rows = []
     for dataset in config["datasets"]:
-        first_folds = load_folds(config["root"], MODELS[0], dataset)
+        first_folds, reference_signature = load_folds(config["root"], MODELS[0], dataset)
         n_images = len(first_folds[0]["y_true"])
-        rng = np.random.default_rng(seed)
-        bootstrap_indices = rng.integers(0, n_images, size=(n_bootstrap, n_images))
+        # The submitted analysis used NumPy's legacy MT19937 RandomState
+        # sequence. ``default_rng(seed)`` produces different resamples and
+        # therefore different displayed confidence-interval endpoints.
+        rng = np.random.RandomState(seed)
+        bootstrap_indices = rng.choice(
+            n_images, size=(n_bootstrap, n_images), replace=True
+        )
         for model_index, model in enumerate(MODELS):
-            folds = first_folds if model_index == 0 else load_folds(config["root"], model, dataset)
+            if model_index == 0:
+                folds = first_folds
+            else:
+                folds, signature = load_folds(config["root"], model, dataset)
+                if not np.array_equal(reference_signature, signature):
+                    raise ValueError(
+                        f"Architecture alignment mismatch: {model}, {dataset}"
+                    )
             summary, per_fold = analyze_model(folds, bootstrap_indices)
             summary_rows.append(
                 {
@@ -163,6 +244,7 @@ def run_configuration(key: str, n_bootstrap: int, seed: int) -> None:
                     "bootstrap_unit": "image",
                     "fold_prediction_combination": "none",
                     "random_seed": seed,
+                    "rng_algorithm": "numpy.random.RandomState(MT19937)",
                 }
             )
             for row in per_fold:
@@ -174,17 +256,39 @@ def run_configuration(key: str, n_bootstrap: int, seed: int) -> None:
                         **row,
                     }
                 )
-    output_dir = TABLE_ROOT / "statistical_tests" / "bootstrap_foldwise" / f"{key}_trained"
-    output_dir.mkdir(parents=True, exist_ok=True)
     summary_table = pd.DataFrame(summary_rows)
-    summary_table.to_csv(output_dir / "bootstrap_summary.csv", index=False, float_format="%.6f")
-    pd.DataFrame(fold_rows).to_csv(output_dir / "fold_metrics.csv", index=False, float_format="%.6f")
+    return summary_table, pd.DataFrame(fold_rows)
+
+
+def write_configuration(
+    key: str, summary_table: pd.DataFrame, fold_table: pd.DataFrame
+) -> None:
+    """Publish a fully computed configuration without partially written CSVs."""
+    config = CONFIGS[key]
+    output_dir = TABLE_ROOT / "statistical_tests" / "bootstrap_foldwise" / f"{key}_trained"
+    atomic_to_csv(
+        summary_table,
+        output_dir / "bootstrap_summary.csv",
+        index=False,
+        float_format="%.6f",
+    )
+    atomic_to_csv(
+        fold_table,
+        output_dir / "fold_metrics.csv",
+        index=False,
+        float_format="%.6f",
+    )
     for dataset, subset in summary_table.groupby("dataset"):
         forest_plot(
             subset,
             f"{config['label']} on {dataset}",
             FIGURE_ROOT / "bootstrap_foldwise" / f"{key}_trained_{dataset}.png",
         )
+
+
+def run_configuration(key: str, n_bootstrap: int, seed: int) -> None:
+    """Compute then publish one explicitly requested training configuration."""
+    write_configuration(key, *analyze_configuration(key, n_bootstrap, seed))
 
 
 def parse_args() -> argparse.Namespace:
@@ -198,8 +302,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     keys = list(CONFIGS) if args.training == "both" else [args.training]
+    # Compute every requested configuration first. In the manuscript default
+    # (``both``), a missing HUMC or PIID input therefore cannot leave a newly
+    # written half-run beside stale results from the other configuration.
+    results = {
+        key: analyze_configuration(key, args.n_bootstrap, args.seed) for key in keys
+    }
     for key in keys:
-        run_configuration(key, args.n_bootstrap, args.seed)
+        write_configuration(key, *results[key])
     print("[DONE] Fold-wise bootstrap analysis complete")
 
 

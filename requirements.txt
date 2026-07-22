@@ -1,4 +1,4 @@
-# Default environment for data preparation, training, evaluation, statistics,
+# Main environment for data preparation, training, evaluation, statistics,
 # Sankey plots, and centroid representative-image selection.
 #
 # UMAP uses an intentionally separate environment: its recorded workflow needs

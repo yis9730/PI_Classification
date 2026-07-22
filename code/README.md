@@ -9,7 +9,6 @@
 ## `data_curation`
 
 - `prepare_public_datasets.py`: released exclusions and byte-preserving copies of retained PIID/Kaggle source files.
-- `screen_duplicate_candidates.py`: supplementary ResNet-18 and pixel-similarity candidate screen for expert review.
 - `duplicate_pairs.csv` and `*_duplicate_exclusions.csv`: reviewed decisions and executable public exclusion manifests.
 
 ## `pipeline`
@@ -25,7 +24,7 @@
 - `build_cohort_summary_table.py`: Table 1-ready public/aggregate cohort and split summary.
 - `friedman_nemenyi_foldwise.py`: dataset-specific architecture rank analysis.
 - `staging_error_direction.py`: adjacent/non-adjacent staging-error summaries.
-- `extract_resnet18_features.py`: common ResNet-18 feature export.
+- `extract_resnet18_features.py`: official timm ResNet-18 A1 raw pooled feature export.
 - `feature_space_statistics.py`: silhouette, centroid-distance, and representative-image calculations; it deliberately does not draw UMAP.
 
 ## `visualization`

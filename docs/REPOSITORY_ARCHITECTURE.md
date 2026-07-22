@@ -34,7 +34,7 @@ Each executable has one responsibility and one place in the workflow. The public
 | Model development | `code/pipeline` + `code/core` | splits and images | fold-specific checkpoints and training records |
 | Internal/external validation | `code/pipeline` | checkpoints and test/external images | fold-specific prediction CSVs |
 | Statistical tests | `code/analysis` | prediction CSVs | table-ready summary CSVs |
-| Feature-space computation | `code/analysis` | images and fixed ResNet-18 feature weight | feature arrays, Table 3 values, representatives |
+| Feature-space computation | `code/analysis` | images and official timm ResNet-18 A1 public weight | feature arrays, Table 3 values, representatives |
 | Main figures | `code/visualization` | analysis outputs | figures 1–4 and supporting figures |
 
 ## Naming rules

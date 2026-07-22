@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
+import os
 from pathlib import Path
 
 
@@ -23,6 +25,29 @@ SOURCE_FIELDS = (
     "final_images",
     *(field for stage in STAGES for field in (f"stage_{stage}_count", f"stage_{stage}_percent")),
 )
+EXPECTED_SOURCE = {
+    "PIID": {
+        "initial_images": 1091,
+        "excluded_images": 10,
+        "final_images": 1081,
+        "stage_counts": (229, 311, 273, 268),
+        "stage_percents": (21.2, 28.8, 25.3, 24.8),
+    },
+    "HUMC": {
+        "initial_images": 1906,
+        "excluded_images": 62,
+        "final_images": 1844,
+        "stage_counts": (233, 709, 575, 327),
+        "stage_percents": (12.6, 38.5, 31.2, 17.7),
+    },
+    "Kaggle": {
+        "initial_images": 159,
+        "excluded_images": 18,
+        "final_images": 141,
+        "stage_counts": (27, 46, 41, 27),
+        "stage_percents": (19.1, 32.6, 29.1, 19.1),
+    },
+}
 
 
 def repo_root() -> Path:
@@ -56,18 +81,40 @@ def read_aggregate_source(path: Path) -> dict[str, dict[str, str]]:
         initial = int(row["initial_images"])
         excluded = int(row["excluded_images"])
         final = int(row["final_images"])
-        stage_total = sum(int(row[f"stage_{stage}_count"]) for stage in STAGES)
+        stage_counts = [int(row[f"stage_{stage}_count"]) for stage in STAGES]
+        if initial < 0 or excluded < 0 or final <= 0 or any(count < 0 for count in stage_counts):
+            raise ValueError(f"{dataset}: counts must be nonnegative and final_images positive")
+        stage_total = sum(stage_counts)
         if initial - excluded != final:
             raise ValueError(f"{dataset}: initial - excluded does not equal final")
         if stage_total != final:
             raise ValueError(f"{dataset}: stage counts do not sum to final_images")
+        expected = EXPECTED_SOURCE[dataset]
+        observed_counts = (initial, excluded, final, *stage_counts)
+        expected_counts = (
+            expected["initial_images"],
+            expected["excluded_images"],
+            expected["final_images"],
+            *expected["stage_counts"],
+        )
+        if observed_counts != expected_counts:
+            raise ValueError(
+                f"{dataset}: aggregate counts do not match the approved Table 1 values"
+            )
         for stage in STAGES:
             count = int(row[f"stage_{stage}_count"])
             reported = float(row[f"stage_{stage}_percent"])
+            if not math.isfinite(reported) or not 0.0 <= reported <= 100.0:
+                raise ValueError(f"{dataset} stage {stage}: percentage must be finite and 0-100")
             calculated = 100.0 * count / final
             if abs(reported - calculated) > 0.11:
                 raise ValueError(
                     f"{dataset} stage {stage}: reported percentage is inconsistent"
+                )
+            expected_percent = expected["stage_percents"][int(stage) - 1]
+            if not math.isclose(reported, expected_percent, rel_tol=0.0, abs_tol=1e-9):
+                raise ValueError(
+                    f"{dataset} stage {stage}: percentage does not match the approved Table 1 value"
                 )
     return rows
 
@@ -80,7 +127,10 @@ def build_table(rows: dict[str, dict[str, str]]) -> list[dict[str, str]]:
         ("Final image set, count", "final_images"),
     ):
         output.append(
-            {"Characteristic": label, **{dataset: rows[dataset][field] for dataset in DATASETS}}
+            {
+                "Characteristic": label,
+                **{dataset: str(int(rows[dataset][field])) for dataset in DATASETS},
+            }
         )
     output.append(
         {
@@ -94,8 +144,8 @@ def build_table(rows: dict[str, dict[str, str]]) -> list[dict[str, str]]:
                 "Characteristic": f"Stage {stage}",
                 **{
                     dataset: (
-                        f'{rows[dataset][f"stage_{stage}_count"]} '
-                        f'({rows[dataset][f"stage_{stage}_percent"]})'
+                        f'{int(rows[dataset][f"stage_{stage}_count"])} '
+                        f'({float(rows[dataset][f"stage_{stage}_percent"]):.1f})'
                     )
                     for dataset in DATASETS
                 },
@@ -123,12 +173,19 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.source.expanduser().resolve() == args.output.expanduser().resolve():
+        raise ValueError("--source and --output must be different files")
     table_rows = build_table(read_aggregate_source(args.source))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=("Characteristic", *DATASETS))
-        writer.writeheader()
-        writer.writerows(table_rows)
+    temporary = args.output.with_name(f".{args.output.name}.{os.getpid()}.tmp")
+    try:
+        with temporary.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=("Characteristic", *DATASETS))
+            writer.writeheader()
+            writer.writerows(table_rows)
+        os.replace(temporary, args.output)
+    finally:
+        temporary.unlink(missing_ok=True)
     print(f"[DONE] Table 1 cohort summary written to {args.output}")
 
 

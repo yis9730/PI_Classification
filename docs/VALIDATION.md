@@ -5,11 +5,29 @@ five-fold retraining run.
 
 - Static release validation passed: Python syntax, required files, 17 conditions per trainer, dependency locks, duplicate counts, private-path scan, and private HUMC split scan.
 - The released Table 1 source contains only the three datasets' manuscript counts and stage percentages; its HUMC row has no patient-level or image-level field.
-- The public PIID/Kaggle curation workflow was executed from the downloaded source folders. After the 28 released exclusions, all 1,081 retained PIID files were SHA-256-identical to source. All 141 generated Kaggle native-square images matched the study analytic set in dimensions and decoded RGB pixels. The expected stage counts passed.
-- The 20 released reviewed pairs were re-scored with direct 224 x 224 ResNet-18 inputs: all 20 met the cosine candidate threshold and 19 met the corroborating pixel threshold. This confirms why expert decisions and the released manifests, not an automatic intersection of scores, define the final exclusions.
+- The public PIID/Kaggle curation workflow was executed from the downloaded source folders. After the 28 released exclusions, all 1,081 retained PIID files were SHA-256-identical to source. All 141 generated Kaggle images had dimensions and decoded-pixel SHA-256 values identical to the archived analytic dataset; 135 rectangular retained images were native-square cropped and six were already square. The expected stage counts passed.
 - The local checkpoint archive contained 102 PIID-trained and 102 HUMC-trained run folders. Each contained exactly five fold weights (510 weights per training source).
 - Fold 1 of the no-augmentation condition for all six architectures was strictly loaded for both PIID-trained and HUMC-trained archives: 12 representative checkpoints with no missing or unexpected state-dictionary keys.
-- The ResNet-18 feature weight matched the documented SHA-256 value.
+- The official timm `resnet18.a1_in1k` cache file matched the documented full
+  SHA-256
+  `D63EAFA07A6E32A39D328E364F8C9F89D671444ECC7F02AA0F7EB8882AF3DD29`.
+- Removing only the classifier tensors from that public checkpoint reproduced
+  all 120 tensors of the preserved headless study encoder bit-for-bit. A full
+  re-extraction of all 3,066 PIID/HUMC/Kaggle images preserved image identity
+  and order; mean absolute feature drift by dataset was below `0.00042` and
+  mean cosine agreement exceeded `0.999997`, consistent with version/device
+  numerical drift under the same model contract.
+- All nine inter-cluster centroid distances and all seven intra-cluster
+  pairwise-mean distances reproduced the manuscript's two-decimal Table 3
+  values. The independent mean-centroid representative selection agreed with
+  the archived CSV for all 12 PIID and all 12 HUMC positions and seven of 12
+  Kaggle positions; the released public reference manifest retains the
+  archived PIID/Kaggle selection instead of silently replacing it.
+- The complete three-dataset UMAP workflow generated the submitted six-panel
+  layout. Repeating it in the locked UMAP environment produced bit-identical
+  coordinates; similarity-Procrustes comparison with the preserved embedding
+  gave `R² = 0.99396`, reflecting small feature/runtime drift while preserving
+  the reported structure.
 - Using existing fold prediction files, reduced bootstrap smoke testing and full code-path tests for Friedman--Nemenyi, critical-difference, Sankey, staging-direction, confusion matrix, ROC, and augmentation-heatmap generation completed successfully.
 
 These checks establish packaging and code-path compatibility. The original

@@ -13,16 +13,26 @@ from pathlib import Path
 
 def find_project_root() -> Path:
     """Return the nearest ancestor containing both code/ and data/."""
-    candidates: list[Path] = []
     env_root = os.environ.get("PI_PROJECT_ROOT")
     if env_root:
-        candidates.append(Path(env_root).expanduser())
-    candidates.extend([Path(__file__).resolve(), Path.cwd().resolve()])
+        candidate = Path(env_root).expanduser().resolve()
+        if (
+            not candidate.is_dir()
+            or not (candidate / "code").is_dir()
+            or not (candidate / "data").is_dir()
+        ):
+            raise RuntimeError(
+                "PI_PROJECT_ROOT must name the repository folder containing code/ and data/: "
+                f"{candidate}"
+            )
+        return candidate
+
+    candidates = [Path(__file__).resolve(), Path.cwd().resolve()]
     for start in candidates:
         base = start if start.is_dir() else start.parent
         for candidate in [base, *base.parents]:
-            if (candidate / "code").exists() and (candidate / "data").exists():
-                return candidate
+            if (candidate / "code").is_dir() and (candidate / "data").is_dir():
+                return candidate.resolve()
     raise RuntimeError(
         "Project root not found. Run from inside the repository or set "
         "PI_PROJECT_ROOT to the folder containing code/ and data/."
@@ -46,8 +56,6 @@ RESULTS_ROOT = DATA_ROOT / "results"
 CHECKPOINT_ROOT = RESULTS_ROOT / "checkpoints"
 PIID_CHECKPOINT_DIR = CHECKPOINT_ROOT / "piid_trained"
 HUMC_CHECKPOINT_DIR = CHECKPOINT_ROOT / "humc_trained"
-FEATURE_EXTRACTOR_CHECKPOINT_DIR = CHECKPOINT_ROOT / "feature_extractors"
-RESNET18_FEATURE_WEIGHT = FEATURE_EXTRACTOR_CHECKPOINT_DIR / "resnet18.pth"
 
 PREDICTION_ROOT = RESULTS_ROOT / "predictions"
 PIID_INFERENCE_DIR = PREDICTION_ROOT / "piid"
@@ -58,7 +66,7 @@ FIGURE_ROOT = RESULTS_ROOT / "figures"
 
 def project_path(relative_path: str | Path) -> Path:
     """Resolve a repository-relative path unless it is already absolute."""
-    path_obj = Path(relative_path)
+    path_obj = Path(relative_path).expanduser()
     return path_obj if path_obj.is_absolute() else PROJECT_ROOT / path_obj
 
 

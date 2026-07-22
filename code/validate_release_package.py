@@ -16,6 +16,7 @@ REQUIRED = [
     "requirements_umap_analysis.txt",
     "README.md",
     "data/aggregates/table_1_cohort_counts.csv",
+    "data/reference/figure4_public_mean_representatives.csv",
     "code/data_curation/duplicate_pairs.csv",
     "code/data_curation/piid_duplicate_exclusions.csv",
     "code/data_curation/kaggle_duplicate_exclusions.csv",
@@ -27,6 +28,7 @@ REQUIRED = [
     "code/check_checkpoint_compatibility.py",
     "code/analysis/bootstrap_macro_f1_foldwise.py",
     "code/analysis/build_cohort_summary_table.py",
+    "code/analysis/extract_resnet18_features.py",
     "code/analysis/feature_space_statistics.py",
     "code/analysis/friedman_nemenyi_foldwise.py",
     "code/visualization/plot_critical_difference.py",
@@ -123,23 +125,49 @@ def main() -> None:
         failures.append("UMAP environment is not locked as expected")
 
     feature_source = (ROOT / "code/analysis/extract_resnet18_features.py").read_text(encoding="utf-8")
-    duplicate_source = (ROOT / "code/data_curation/screen_duplicate_candidates.py").read_text(encoding="utf-8")
     curation_source = (ROOT / "code/data_curation/prepare_public_datasets.py").read_text(encoding="utf-8")
-    for label, source in (
-        ("manuscript feature extraction", feature_source),
-        ("duplicate screening", duplicate_source),
+    if "transforms.Resize((224, 224))" not in feature_source:
+        failures.append("manuscript feature extraction must resize directly to 224 x 224")
+    if "transforms.Resize(256)" in feature_source or "transforms.CenterCrop" in feature_source:
+        failures.append("manuscript feature extraction must use only the direct 224 x 224 resize")
+    expected_resnet18_sha256 = (
+        "D63EAFA07A6E32A39D328E364F8C9F89D671444ECC7F02AA0F7EB8882AF3DD29"
+    )
+    expected_resnet18_url = (
+        "https://github.com/huggingface/pytorch-image-models/releases/download/"
+        "v0.1-rsb-weights/resnet18_a1_0-d63eafa0.pth"
+    )
+    for snippet in (
+        'FEATURE_MODEL_NAME = "resnet18.a1_in1k"',
+        expected_resnet18_sha256,
+        expected_resnet18_url,
+        'CLASSIFIER_KEYS = {"fc.weight", "fc.bias"}',
+        "torch.hub.download_url_to_file(",
+        "model.load_state_dict(encoder_state, strict=True)",
+        '"l2_normalized": False',
     ):
-        if "transforms.Resize((224, 224))" not in source:
-            failures.append(f"{label} must resize model inputs directly to 224 x 224")
-        if "transforms.Resize(256)" in source or "transforms.CenterCrop" in source:
-            failures.append(f"{label} must not use a 256 resize or center crop")
+        if snippet not in feature_source:
+            failures.append(f"manuscript feature public-weight contract is missing: {snippet}")
+    for forbidden in (
+        "--weights",
+        "--skip-weight-hash-check",
+        "69E2B9D2711F7CFB",
+        "torch.nn.functional.normalize",
+    ):
+        if forbidden in feature_source:
+            failures.append(
+                f"manuscript feature extraction violates its raw public-weight contract: {forbidden}"
+            )
 
     if "shutil.copy2(src, dst)" not in curation_source:
         failures.append("PIID curation must copy retained source files unchanged")
+    if curation_source.count("width, height = copy_source_image(src, dst)") != 1:
+        failures.append("Only PIID must use the unchanged-copy path")
     for snippet in (
         "crop_kaggle_native_square",
         "side = min(width, height)",
         "image.crop((left, top, left + side, top + side))",
+        '"operation": "native_center_square_crop"',
     ):
         if snippet not in curation_source:
             failures.append(f"Kaggle native centre-square curation is missing: {snippet}")
@@ -152,9 +180,11 @@ def main() -> None:
             failures.append(f"public-data curation contains an unreported transform: {forbidden}")
     for required_guard in (
         "validate_source_output_separation",
+        "validate_source_layout",
         "paths_overlap",
         "matched_exclusions",
         "expected_raw",
+        "image.width != image.height",
     ):
         if required_guard not in curation_source:
             failures.append(f"public-data curation safety guard is missing: {required_guard}")
@@ -243,6 +273,14 @@ def main() -> None:
         failures.append(
             f"expected 10 PIID and 18 Kaggle exclusions, found {len(piid)} and {len(kaggle)}"
         )
+
+    figure4_reference = csv_rows(ROOT / "data/reference/figure4_public_mean_representatives.csv")
+    if len(figure4_reference) != 24:
+        failures.append(
+            f"expected 24 public Figure 4 reference rows, found {len(figure4_reference)}"
+        )
+    if {row.get("dataset") for row in figure4_reference} != {"PIID", "Kaggle"}:
+        failures.append("Figure 4 public reference must contain PIID and Kaggle only")
 
     table1_path = ROOT / "data/aggregates/table_1_cohort_counts.csv"
     table1_rows = csv_rows(table1_path)
@@ -336,7 +374,7 @@ def main() -> None:
     print(" - 20 duplicate pairs; 10 PIID and 18 Kaggle exclusions")
     print(" - aggregate-only Table 1 source matches the manuscript")
     print(" - PyTorch 2.9.0 / TorchVision 0.24.0 and two environment contracts locked")
-    print(" - PIID is copied unchanged; Kaggle uses the native centre-square analytic crop")
+    print(" - PIID is copied unchanged; Kaggle uses a native short-side centre crop")
     print(" - direct 224 x 224 model-input resize contracts verified")
     print(" - model-pipeline CenterCrop is confined to the centre zoom-in augmentation")
     print(" - no prohibited personal/server paths in the current scanned files")

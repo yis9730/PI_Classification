@@ -13,9 +13,9 @@ Environment
 Data preparation
 - Four stages: 1, 2, 3, 4
 - Apply the released duplicate-exclusion manifests
-- Copy retained PIID files unchanged
-- Centre-crop the longer axis of retained Kaggle files to the native square
-  analytic frame used in the study; do not resize them during curation
+- Copy retained PIID files byte-for-byte
+- Centre-crop retained Kaggle images to their native short-side square at
+  native resolution; authorised HUMC preparation uses the same geometric rule
 - Final public data: PIID 1,081 images; Kaggle 141 images
 
 Duplicate curation
@@ -33,8 +33,8 @@ Training
 - Load source images as RGB and resize every model input directly to 224 x 224
   with Albumentations `A.Resize(224, 224)`
 - In the model pipeline, `A.CenterCrop` is used only in the named centre
-  zoom-in augmentation. The separate Kaggle curation crop is a deterministic
-  native-size square crop and does not use Albumentations.
+  zoom-in augmentation. It is separate from the deterministic native-square
+  curation of rectangular Kaggle/HUMC images.
 - The training loader uses `drop_last=True`, matching the study loop
 - AdamW, weighted cross entropy, batch size 16, learning rate 1e-5,
   weight decay 1e-4, maximum 50 epochs, early-stopping patience 20
@@ -53,11 +53,11 @@ Validation
 Analysis
 - Fold-specific predictions are retained; no fold prediction ensemble is used
 - Fold-wise image bootstrap: 1,000 replicates, seed 40, percentile 95% interval
-- Dataset-specific Friedman analysis with Iman-Davenport omnibus decision and
-  Nemenyi post-hoc comparison
+- Dataset-specific Friedman chi-square omnibus decision with Nemenyi post-hoc
+  comparison; Iman-Davenport is reported as a sensitivity statistic
 - Fold-averaged confusion Sankey visualization
-- Frozen ResNet-18 512-dimensional feature workflow; see
-  docs/RESNET18_FEATURES.md for the required checkpoint SHA-256
+- Frozen official timm resnet18.a1_in1k 512-dimensional feature workflow;
+  the public weight is downloaded automatically and its full SHA-256 is verified
 - Main-artifact command and access contract: docs/MAIN_ARTIFACTS.md
 - End-to-end execution order: docs/REPRODUCTION_WORKFLOW.md
 

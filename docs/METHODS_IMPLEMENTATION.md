@@ -2,9 +2,8 @@
 
 | Study method | Authoritative implementation |
 |---|---|
-| Supplementary duplicate candidate screening | `code/data_curation/screen_duplicate_candidates.py` |
 | Authoritative pair decisions and exclusions | `code/data_curation/duplicate_pairs.csv`, exclusion manifests |
-| PIID unchanged copy and Kaggle native square curation | `code/data_curation/prepare_public_datasets.py` |
+| PIID unchanged copy; Kaggle native short-side centre crop | `code/data_curation/prepare_public_datasets.py` |
 | Direct 224 x 224 model-input resize | `A.Resize` in `code/pipeline/*.py` |
 | Cohort and split summary (Table 1) | `code/analysis/build_cohort_summary_table.py` |
 | PIID image-level split | `code/pipeline/dataset_split_normalization_piid_main.py` |
@@ -15,8 +14,8 @@
 | Architecture rank analysis | `code/analysis/friedman_nemenyi_foldwise.py` |
 | Critical-difference diagram | `code/visualization/plot_critical_difference.py` |
 | Fold-averaged confusion Sankey | `code/visualization/plot_sankey_fold_averaged.py` |
-| ResNet-18 feature extraction | `code/analysis/extract_resnet18_features.py` |
-| Feature extraction | `code/analysis/extract_resnet18_features.py` |
+| Frozen official timm ResNet-18 A1 feature extraction | `code/analysis/extract_resnet18_features.py` |
+| Raw pooled 512-D feature export | `code/analysis/extract_resnet18_features.py` |
 | Silhouette and centroid analysis | `code/analysis/feature_space_statistics.py` |
 | UMAP (Main Figure 3) | `code/visualization/plot_umap.py` in the `umap` environment |
 | Centroid montage (Main Figure 4) | `code/visualization/plot_centroid_montage.py` |
