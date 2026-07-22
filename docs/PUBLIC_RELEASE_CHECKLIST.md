@@ -3,6 +3,8 @@
 - [ ] Run `python code/validate_release_package.py` and resolve every failure.
 - [ ] Confirm the remote belongs to the official institutional/project account.
 - [ ] Confirm no private HUMC files, patient identifiers, checkpoints, or predictions are staged.
+- [ ] Review reachable Git history separately; if previously committed HUMC aggregates are not institutionally approved, republish from an approved clean history.
+- [ ] Confirm commit author/committer email addresses are suitable for public release.
 - [ ] Confirm `requirements_train_eval.txt` and `requirements_umap_analysis.txt` remain separate and locked.
 - [ ] Confirm each main table and figure has a current row in `docs/MAIN_ARTIFACTS.md`.
 - [ ] Confirm the manuscript names, dataset labels, split rules, and code release URL agree.

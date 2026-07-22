@@ -1,7 +1,9 @@
 # Image resizing and ResNet-18 workflows
 
-Dataset curation does not crop or resize retained images. Model-input resizing
-is performed in memory by the relevant analysis or classification transform.
+PIID curation preserves retained files unchanged. Kaggle curation first
+creates the study's native-size centre-square analytic frame. Model-input
+resizing is then performed in memory by the relevant analysis or
+classification transform.
 
 The expected checkpoint path is:
 
@@ -16,11 +18,12 @@ study checkpoint separately and verify its hash.
 
 ## Classification training and evaluation
 
-The PIID and HUMC classification pipelines load each source image as RGB and
-apply Albumentations `A.Resize(224, 224)`. The same direct resize is used when
-calculating fold-specific normalisation statistics and during validation/test
-inference. The full image frame is mapped to 224 x 224; there is no preceding
-spatial crop.
+The PIID and HUMC classification pipelines load each prepared analytic image
+as RGB and apply Albumentations `A.Resize(224, 224)`. The same direct resize is
+used when calculating fold-specific normalisation statistics and during
+validation/test inference. No `Resize(256) -> CenterCrop(224)` preprocessing
+sequence is used. Kaggle's separate native-size square curation happens before
+this shared model-input transform.
 
 `A.CenterCrop` appears only in the explicitly named centre zoom-in training
 augmentation. When that condition is selected, a stochastic 158 x 158 centre
@@ -38,7 +41,8 @@ vectors exported by `code/analysis/extract_resnet18_features.py`:
 2. apply ImageNet mean/std normalisation;
 3. retain the raw pooled 512-dimensional vector without L2 normalisation.
 
-There is no intermediate 256-pixel resize and no centre crop in this workflow.
+There is no intermediate 256-pixel resize and no model-input centre crop in
+this workflow.
 
 ## Supplementary duplicate-candidate screening utility
 

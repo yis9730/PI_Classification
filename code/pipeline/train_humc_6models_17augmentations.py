@@ -143,7 +143,7 @@ def set_seed(seed: int) -> None:
 def build_train_transform(mean: list[float], std: list[float], aug_flags: dict) -> A.Compose:
     transforms = [A.Resize(INPUT_SIZE, INPUT_SIZE)]
     if aug_flags.get("use_flip"):
-        transforms.append(A.HorizontalFlip(p=0.5))
+        transforms.append(A.Flip(p=0.5))
     if aug_flags.get("use_rotate"):
         transforms.append(A.RandomRotate90(p=0.5))
     if aug_flags.get("use_zoomin"):
@@ -270,6 +270,7 @@ def train_one_fold(
         AlbImageDataset(train_paths, train_labels.tolist(), train_transform),
         batch_size=args.batch_size,
         shuffle=True,
+        drop_last=True,
         num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
         generator=torch.Generator().manual_seed(RANDOM_SEED + fold_id),

@@ -1,10 +1,12 @@
 # Data curation and duplicate screening
 
 `prepare_public_datasets.py` builds the public analytic PIID and Kaggle folders.
-It applies the released exclusion manifests and copies every retained source
-file unchanged. Dataset curation does not crop, resize, re-encode, or change
-EXIF metadata. The classification pipeline performs the direct 224 x 224
-resize in memory with Albumentations.
+It applies the released exclusion manifests, copies retained PIID files
+unchanged, and centre-crops only the longer axis of retained Kaggle images to
+their native square size. This reproduces the study's `Kaggle_cropped`
+external-validation input without a 256-pixel resize. The classification
+pipeline subsequently applies the direct 224 x 224 model-input resize in
+memory with Albumentations.
 
 The supplementary screening utility uses a frozen ImageNet-pretrained
 ResNet-18 encoder (512-D features) with cosine similarity >= 0.85 and reports a

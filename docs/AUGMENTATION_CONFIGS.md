@@ -5,7 +5,7 @@ All conditions begin with a 224 x 224 resize and end with fold-specific normaliz
 | ID | Operations |
 |---|---|
 | `exp00_NoAug` | none |
-| `exp01_Flip` | horizontal flip |
+| `exp01_Flip` | random horizontal, vertical, or combined flip |
 | `exp02_Rotate90` | random 0/90/180/270-degree rotation |
 | `exp03a_RandomZoomIn` | random resized crop, scale 0.50-0.99, square aspect |
 | `exp03b_CenterZoomIn` | centered 158 x 158 crop, then resize to 224 |

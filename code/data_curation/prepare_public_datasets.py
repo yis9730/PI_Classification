@@ -4,8 +4,9 @@ This script does three things:
 
 1. Reads the public raw PIID and Kaggle stage folders.
 2. Excludes duplicate or near-duplicate files listed in the released manifests.
-3. Copies each retained source image without changing its pixels, dimensions,
-   encoding, or EXIF metadata.
+3. Copies retained PIID files unchanged and creates the study's native-size
+   centre-square Kaggle analytic images. The Kaggle step crops only the longer
+   axis; it does not resize to 256 or 224 pixels.
 
 It never deletes source images. The generated datasets are written to:
 
@@ -86,6 +87,25 @@ def copy_source_image(src: Path, dst: Path) -> tuple[int, int]:
     return width, height
 
 
+def crop_kaggle_native_square(src: Path, dst: Path) -> tuple[int, int]:
+    """Centre-crop the longer axis without resizing the retained Kaggle image."""
+    with Image.open(src) as image:
+        image.load()
+        width, height = image.size
+        side = min(width, height)
+        left = (width - side) // 2
+        top = (height - side) // 2
+        square = image.crop((left, top, left + side, top + side))
+        save_kwargs: dict[str, object] = {}
+        if image.info.get("icc_profile"):
+            save_kwargs["icc_profile"] = image.info["icc_profile"]
+        if image.info.get("exif"):
+            save_kwargs["exif"] = image.info["exif"]
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        square.save(dst, format=image.format, **save_kwargs)
+    return side, side
+
+
 def paths_overlap(first: Path, second: Path) -> bool:
     """Return True when either resolved path contains the other."""
     first = first.expanduser().resolve()
@@ -126,6 +146,9 @@ def reset_output_dir(output_dir: Path, overwrite: bool) -> None:
                 "Choose another output root or rerun with --overwrite."
             )
     output_dir.mkdir(parents=True, exist_ok=True)
+    placeholder = output_dir / ".gitkeep"
+    if not placeholder.exists():
+        placeholder.write_bytes(b"\n")
 
 
 def build_piid(
@@ -175,6 +198,7 @@ def build_piid(
                 "output_path": dst.as_posix(),
                 "excluded": False,
                 "reason": "",
+                "operation": "copied_unchanged",
                 "width": width,
                 "height": height,
             })
@@ -225,7 +249,7 @@ def build_kaggle(
                 continue
 
             dst = dst_dir / src.name
-            width, height = copy_source_image(src, dst)
+            width, height = crop_kaggle_native_square(src, dst)
             records.append({
                 "dataset": "Kaggle",
                 "stage": int(stage),
@@ -234,6 +258,7 @@ def build_kaggle(
                 "output_path": dst.as_posix(),
                 "excluded": False,
                 "reason": "",
+                "operation": "native_center_square_crop",
                 "width": width,
                 "height": height,
             })

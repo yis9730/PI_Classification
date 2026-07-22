@@ -13,8 +13,9 @@ Environment
 Data preparation
 - Four stages: 1, 2, 3, 4
 - Apply the released duplicate-exclusion manifests
-- Copy retained PIID and Kaggle source files without crop, resize, re-encoding,
-  or EXIF modification
+- Copy retained PIID files unchanged
+- Centre-crop the longer axis of retained Kaggle files to the native square
+  analytic frame used in the study; do not resize them during curation
 - Final public data: PIID 1,081 images; Kaggle 141 images
 
 Duplicate curation
@@ -31,8 +32,10 @@ Training
 - Five folds
 - Load source images as RGB and resize every model input directly to 224 x 224
   with Albumentations `A.Resize(224, 224)`
-- `A.CenterCrop` is used only in the named centre zoom-in augmentation; it is
-  not a dataset-curation operation
+- In the model pipeline, `A.CenterCrop` is used only in the named centre
+  zoom-in augmentation. The separate Kaggle curation crop is a deterministic
+  native-size square crop and does not use Albumentations.
+- The training loader uses `drop_last=True`, matching the study loop
 - AdamW, weighted cross entropy, batch size 16, learning rate 1e-5,
   weight decay 1e-4, maximum 50 epochs, early-stopping patience 20
 - Study-trained classification weights are not distributed; visitors train

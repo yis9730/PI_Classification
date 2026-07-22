@@ -134,17 +134,21 @@ def main() -> None:
             failures.append(f"{label} must not use a 256 resize or center crop")
 
     if "shutil.copy2(src, dst)" not in curation_source:
-        failures.append("public-data curation must copy retained source files unchanged")
+        failures.append("PIID curation must copy retained source files unchanged")
+    for snippet in (
+        "crop_kaggle_native_square",
+        "side = min(width, height)",
+        "image.crop((left, top, left + side, top + side))",
+    ):
+        if snippet not in curation_source:
+            failures.append(f"Kaggle native centre-square curation is missing: {snippet}")
     for forbidden in (
-        "center_crop_square",
-        "save_square_image",
         "ImageOps.exif_transpose",
-        "image.crop(",
         "image.resize(",
-        "image.save(",
+        "Resize(256)",
     ):
         if forbidden in curation_source:
-            failures.append(f"public-data curation contains a pixel-changing operation: {forbidden}")
+            failures.append(f"public-data curation contains an unreported transform: {forbidden}")
     for required_guard in (
         "validate_source_output_separation",
         "paths_overlap",
@@ -201,6 +205,24 @@ def main() -> None:
             failures.append(f"{relative}: train, centre-zoom, and eval resize contract changed")
         if source.count("A.CenterCrop(") != 1 or "use_center_zoomin" not in source:
             failures.append(f"{relative}: CenterCrop must occur only in centre zoom-in augmentation")
+        if "transforms.append(A.Flip(p=0.5))" not in source:
+            failures.append(f"{relative}: study Flip augmentation contract changed")
+        if "drop_last=True" not in source:
+            failures.append(f"{relative}: training DataLoader must drop the final incomplete batch")
+
+    model_source = (ROOT / "code/core/model_pipeline_utils.py").read_text(encoding="utf-8")
+    if "torch.randn(2, 3, input_size, input_size)" not in model_source:
+        failures.append("model feature-probe RNG contract changed")
+
+    for relative in (
+        "code/pipeline/evaluate_piid_trained_final_results.py",
+        "code/pipeline/evaluate_humc_trained_final_results.py",
+    ):
+        source = classification_sources[relative]
+        if "stage_folder_dataset_available" not in source:
+            failures.append(f"{relative}: incomplete optional datasets must be skipped")
+        if "model.load_state_dict(state, strict=True)" not in source:
+            failures.append(f"{relative}: checkpoint loading must be explicitly strict")
 
     for relative in (
         "code/pipeline/train_piid_6models_17augmentations.py",
@@ -286,10 +308,11 @@ def main() -> None:
     print(" - 17 training conditions in each training entry point")
     print(" - 20 duplicate pairs; 10 PIID and 18 Kaggle exclusions")
     print(" - PyTorch 2.9.0 / TorchVision 0.24.0 and two environment contracts locked")
-    print(" - retained public images are copied unchanged during curation")
+    print(" - PIID is copied unchanged; Kaggle uses the native centre-square analytic crop")
     print(" - direct 224 x 224 model-input resize contracts verified")
-    print(" - CenterCrop is confined to the centre zoom-in training augmentation")
-    print(" - no prohibited personal/server paths or legacy test references")
+    print(" - model-pipeline CenterCrop is confined to the centre zoom-in augmentation")
+    print(" - no prohibited personal/server paths in the current scanned files")
+    print(" - Git history and commit metadata require a separate release-owner review")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,12 @@ Run commands from the repository root. Use the main environment unless a step ex
 python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite
 ```
 
-Expected final counts are PIID 1,081 and Kaggle 141. The script writes curation manifests under `data/results/manifests/`; those are runtime artefacts and are not committed.
+Expected final counts are PIID 1,081 and Kaggle 141. PIID files are retained
+unchanged; Kaggle files are converted to the native-size centre-square
+analytic frames used for manuscript external validation. This is not a
+`Resize(256) -> CenterCrop(224)` model transform. The script writes curation
+manifests under `data/results/manifests/`; those are runtime artefacts and are
+not committed.
 
 ## 2. Confirm or regenerate splits
 

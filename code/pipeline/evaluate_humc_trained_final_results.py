@@ -164,6 +164,22 @@ def load_stage_folder_dataset(root: Path) -> tuple[list[str], list[int]]:
     return paths, labels
 
 
+def stage_folder_dataset_available(root: Path) -> bool:
+    """Return True only when every required stage contains an image."""
+    if not root.is_dir():
+        return False
+    for stage in CLASS_NAMES:
+        stage_dir = root / stage
+        if not stage_dir.is_dir():
+            return False
+        if not any(
+            path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+            for path in stage_dir.iterdir()
+        ):
+            return False
+    return True
+
+
 def calculate_specificity(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
     cm = confusion_matrix(y_true, y_pred, labels=list(range(NUM_CLASSES)))
     specificities = []
@@ -293,10 +309,10 @@ def main() -> None:
         "PIID": PIID_DATA_DIR,
         "Kaggle": KAGGLE_DATA_DIR,
     }.items():
-        if dataset_root.exists():
+        if stage_folder_dataset_available(dataset_root):
             eval_sets[dataset_name] = load_stage_folder_dataset(dataset_root)
         else:
-            print(f"[SKIP] Optional dataset not found: {dataset_root}")
+            print(f"[SKIP] Optional dataset unavailable or incomplete: {dataset_root}")
     print({name: len(paths) for name, (paths, _) in eval_sets.items()})
 
     foldwise_rows = []
@@ -320,7 +336,7 @@ def main() -> None:
                     dropout_rate=args.dropout,
                 )
                 state = torch.load(ckpt, map_location=device)
-                model.load_state_dict(state)
+                model.load_state_dict(state, strict=True)
                 model.to(device)
 
                 stats = norm_stats[fold_id]
