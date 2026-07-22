@@ -390,8 +390,10 @@ def calculate_specificity(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
 
 
 def calculate_macro_auc(y_true: np.ndarray, y_prob: np.ndarray) -> float:
+    """Evaluate one four-class softmax model with class-wise macro ROC-AUC."""
     try:
         y_bin = label_binarize(y_true, classes=list(range(NUM_CLASSES)))
+        # This is an evaluation metric, not a separate classifier.
         return float(roc_auc_score(y_bin, y_prob, average="macro"))
     except ValueError:
         return float("nan")

@@ -398,7 +398,7 @@ class UnifiedHeadModel(nn.Module):
                 features = features.permute(0, 3, 1, 2)
             return F.adaptive_avg_pool2d(features, (1, 1)).flatten(1)
         if features.ndim == 3:
-            if "vit" in self.backbone_name.lower() or "deit" in self.backbone_name.lower():
+            if "vit" in self.backbone_name.lower():
                 return features[:, 0]
             return features.mean(dim=1)
         if features.ndim == 2:

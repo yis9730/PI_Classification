@@ -21,6 +21,7 @@ REQUIRED = [
     "code/data_curation/piid_duplicate_exclusions.csv",
     "code/data_curation/kaggle_duplicate_exclusions.csv",
     "code/data_curation/review_duplicate_candidates.py",
+    "code/core/model_params_reference.csv",
     "code/core/model_pipeline_utils.py",
     "code/pipeline/train_piid_6models_17augmentations.py",
     "code/pipeline/train_humc_6models_17augmentations.py",
@@ -32,8 +33,10 @@ REQUIRED = [
     "code/analysis/extract_resnet18_features.py",
     "code/analysis/feature_space_statistics.py",
     "code/analysis/friedman_nemenyi_foldwise.py",
+    "code/analysis/staging_error_direction.py",
     "code/visualization/plot_critical_difference.py",
     "code/visualization/plot_centroid_montage.py",
+    "code/visualization/plot_evaluation_results.py",
     "code/visualization/plot_sankey_fold_averaged.py",
     "code/visualization/plot_umap.py",
     "docs/ENVIRONMENTS.md",
@@ -210,11 +213,87 @@ def csv_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def validate_final_classification_models() -> list[str]:
+    """Require every classification workflow to name exactly the final six models."""
+    expected = {
+        "swin_tiny_patch4_window7_224",
+        "efficientnet_v2_s",
+        "vit_base_patch16_224",
+        "resnet50",
+        "densenet121",
+        "convnext_small",
+    }
+    assignments = {
+        "code/core/model_pipeline_utils.py": "FINAL_BASELINE_BACKBONES",
+        "code/pipeline/train_piid_6models_17augmentations.py": "BACKBONES",
+        "code/pipeline/train_humc_6models_17augmentations.py": "BACKBONES",
+        "code/pipeline/evaluate_piid_trained_final_results.py": "BACKBONES",
+        "code/pipeline/evaluate_humc_trained_final_results.py": "BACKBONES",
+        "code/analysis/bootstrap_macro_f1_foldwise.py": "MODELS",
+        "code/analysis/friedman_nemenyi_foldwise.py": "MODELS",
+        "code/analysis/staging_error_direction.py": "MODELS",
+        "code/visualization/plot_evaluation_results.py": "MODELS",
+        "code/visualization/plot_sankey_fold_averaged.py": "MODELS",
+    }
+    failures: list[str] = []
+
+    for relative, variable in assignments.items():
+        path = ROOT / relative
+        if not path.is_file():
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        observed = assigned_literal(tree, variable)
+        if not isinstance(observed, (list, tuple)) or not all(
+            isinstance(item, str) for item in observed
+        ):
+            failures.append(f"{relative}: {variable} must be a literal model list")
+            continue
+        if len(observed) != len(expected) or set(observed) != expected:
+            failures.append(
+                f"{relative}: {variable} must contain exactly the six final models; "
+                f"found {list(observed)}"
+            )
+
+    critical_difference_path = ROOT / "code/visualization/plot_critical_difference.py"
+    if critical_difference_path.is_file():
+        tree = ast.parse(
+            critical_difference_path.read_text(encoding="utf-8"),
+            filename=str(critical_difference_path),
+        )
+        model_keys = assigned_literal(tree, "MODEL_KEYS")
+        if not isinstance(model_keys, dict) or set(model_keys) != expected:
+            failures.append(
+                "code/visualization/plot_critical_difference.py: MODEL_KEYS must "
+                "contain exactly the six final models"
+            )
+
+    reference_path = ROOT / "code/core/model_params_reference.csv"
+    if reference_path.is_file():
+        rows = csv_rows(reference_path)
+        expected_columns = {"Model", "Params", "Params_Raw", "Size_MB"}
+        observed_columns = set(rows[0]) if rows else set()
+        observed_models = [row.get("Model", "") for row in rows]
+        if observed_columns != expected_columns:
+            failures.append(
+                "model_params_reference.csv must contain only Model, Params, "
+                "Params_Raw, and Size_MB columns"
+            )
+        if len(observed_models) != len(expected) or set(observed_models) != expected:
+            failures.append(
+                "model_params_reference.csv must contain exactly one row for each "
+                f"of the six final models; found {observed_models}"
+            )
+
+    return failures
+
+
 def main() -> None:
     failures: list[str] = []
     for relative in REQUIRED:
         if not (ROOT / relative).is_file():
             failures.append(f"missing required file: {relative}")
+
+    failures.extend(validate_final_classification_models())
 
     train_requirements = (ROOT / "requirements_train_eval.txt").read_text(encoding="utf-8")
     umap_requirements = (ROOT / "requirements_umap_analysis.txt").read_text(encoding="utf-8")
@@ -548,6 +627,7 @@ def main() -> None:
     print(" - PIID is copied unchanged; Kaggle uses a native short-side centre crop")
     print(" - direct 224 x 224 model-input resize contracts verified")
     print(" - model-pipeline CenterCrop is confined to the centre zoom-in augmentation")
+    print(" - all classification workflows and the parameter table contain only the final six models")
     print(" - no prohibited personal/server paths in the current scanned files")
     print(" - Git history and commit metadata are outside this current-tree scan")
 

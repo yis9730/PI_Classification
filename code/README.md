@@ -4,7 +4,7 @@
 
 - `path_config.py`: repository-relative data and output locations.
 - `model_pipeline_utils.py`: shared six-backbone model factory and classifier heads.
-- `model_params_reference.csv`: parameter-count reference used in reporting.
+- `model_params_reference.csv`: parameter-count reference for the six final classification architectures.
 
 ## `data_curation`
 
