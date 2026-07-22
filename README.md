@@ -109,8 +109,8 @@ code/
   pipeline/        splits, training, internal/external evaluation
   analysis/        statistics and feature-space numerical analysis
   visualization/   manuscript-facing figures, including UMAP and Sankey
-data/              input locations, public split metadata, generated outputs
+data/              input locations, approved aggregates, public split metadata, generated outputs
 docs/              environment, privacy, workflow, and result contracts
 ```
 
-Generated images, predictions, checkpoints, and private HUMC material are ignored by Git. The release must contain executable code and documented inputs for every main figure and table, but must not contain controlled images, patient identifiers, or private image-level split/prediction files.
+Generated images, predictions, checkpoints, and private HUMC material are ignored by Git. The released HUMC-derived data are limited to the aggregate counts and percentages already reported in Table 1. The release must not contain controlled images, patient identifiers, or private row-level split/prediction files.

@@ -4,6 +4,7 @@ The structural checks below were supplemented by one complete representative
 five-fold retraining run.
 
 - Static release validation passed: Python syntax, required files, 17 conditions per trainer, dependency locks, duplicate counts, private-path scan, and private HUMC split scan.
+- The released Table 1 source contains only the three datasets' manuscript counts and stage percentages; its HUMC row has no patient-level or image-level field.
 - The public PIID/Kaggle curation workflow was executed from the downloaded source folders. After the 28 released exclusions, all 1,081 retained PIID files were SHA-256-identical to source. All 141 generated Kaggle native-square images matched the study analytic set in dimensions and decoded RGB pixels. The expected stage counts passed.
 - The 20 released reviewed pairs were re-scored with direct 224 x 224 ResNet-18 inputs: all 20 met the cosine candidate threshold and 19 met the corroborating pixel threshold. This confirms why expert decisions and the released manifests, not an automatic intersection of scores, define the final exclusions.
 - The local checkpoint archive contained 102 PIID-trained and 102 HUMC-trained run folders. Each contained exactly five fold weights (510 weights per training source).

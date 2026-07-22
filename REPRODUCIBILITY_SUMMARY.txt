@@ -46,8 +46,9 @@ Validation
   and Kaggle external validation
 - HUMC-trained: HUMC patient-held-out internal test, PIID external validation,
   and Kaggle external validation
-- HUMC code is public; HUMC images, identifiers, labels, and image-level splits
-  are private and are not included
+- HUMC code and the counts/percentages already reported in Table 1 are public
+- HUMC images, patient-level rows, identifiers, labels, image-level splits,
+  normalisation values, checkpoints, and predictions remain private
 
 Analysis
 - Fold-specific predictions are retained; no fold prediction ensemble is used

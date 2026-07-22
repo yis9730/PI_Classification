@@ -1,0 +1,4 @@
+dataset,initial_images,excluded_images,final_images,stage_1_count,stage_1_percent,stage_2_count,stage_2_percent,stage_3_count,stage_3_percent,stage_4_count,stage_4_percent
+PIID,1091,10,1081,229,21.2,311,28.8,273,25.3,268,24.8
+HUMC,1906,62,1844,233,12.6,709,38.5,575,31.2,327,17.7
+Kaggle,159,18,141,27,19.1,46,32.6,41,29.1,27,19.1

@@ -1,82 +1,117 @@
-"""Build a Table 1-ready cohort and split summary without exposing private rows.
+"""Build manuscript Table 1 from its approved, aggregate-only source values.
 
-By default, the script uses only public PIID split metadata and locally prepared
-public Kaggle folders. A project owner with authorised HUMC access may provide a
-local aggregate-only HUMC JSON with ``--humc-meta``; no HUMC metadata is
-distributed in this package.
+The released source contains one row per dataset and only the image counts and
+stage percentages already reported in Table 1. It contains no patient row,
+identifier, image path, split membership, or controlled clinical attribute.
+The HUMC row therefore reconstructs the published table; it does not rederive
+the values from private HUMC records.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
-import json
 from pathlib import Path
 
 
+DATASETS = ("PIID", "HUMC", "Kaggle")
 STAGES = ("1", "2", "3", "4")
-IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+SOURCE_FIELDS = (
+    "dataset",
+    "initial_images",
+    "excluded_images",
+    "final_images",
+    *(field for stage in STAGES for field in (f"stage_{stage}_count", f"stage_{stage}_percent")),
+)
 
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def read_json(path: Path) -> dict[str, object]:
-    with path.open(encoding="utf-8") as handle:
-        return json.load(handle)
+def read_aggregate_source(path: Path) -> dict[str, dict[str, str]]:
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != SOURCE_FIELDS:
+            raise ValueError(
+                f"Unexpected Table 1 source columns in {path}: {reader.fieldnames}"
+            )
+        source_rows = list(reader)
 
-
-def stage_counts_from_folder(root: Path) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for stage in STAGES:
-        folder = root / stage
-        if not folder.is_dir():
-            raise FileNotFoundError(f"Prepared stage folder not found: {folder}")
-        counts[stage] = sum(
-            path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES
-            for path in folder.iterdir()
+    if len(source_rows) != len(DATASETS):
+        raise ValueError(
+            f"Expected exactly one source row per dataset; found {len(source_rows)} rows"
         )
-    return counts
+    rows: dict[str, dict[str, str]] = {}
+    for row in source_rows:
+        dataset = row["dataset"]
+        if dataset in rows:
+            raise ValueError(f"Duplicate Table 1 source row: {dataset}")
+        rows[dataset] = row
+
+    if set(rows) != set(DATASETS):
+        raise ValueError(f"Expected exactly {DATASETS}; found {tuple(rows)}")
+
+    for dataset, row in rows.items():
+        initial = int(row["initial_images"])
+        excluded = int(row["excluded_images"])
+        final = int(row["final_images"])
+        stage_total = sum(int(row[f"stage_{stage}_count"]) for stage in STAGES)
+        if initial - excluded != final:
+            raise ValueError(f"{dataset}: initial - excluded does not equal final")
+        if stage_total != final:
+            raise ValueError(f"{dataset}: stage counts do not sum to final_images")
+        for stage in STAGES:
+            count = int(row[f"stage_{stage}_count"])
+            reported = float(row[f"stage_{stage}_percent"])
+            calculated = 100.0 * count / final
+            if abs(reported - calculated) > 0.11:
+                raise ValueError(
+                    f"{dataset} stage {stage}: reported percentage is inconsistent"
+                )
+    return rows
 
 
-def metadata_rows(metadata: dict[str, object], source_access: str) -> list[dict[str, object]]:
-    distribution = metadata["stage_distribution"]
-    rows = []
-    for split_set, key in (("All", "total"), ("Train-validation", "trainval"), ("Held-out test", "test")):
-        stage_distribution = distribution[key]
-        rows.append(
+def build_table(rows: dict[str, dict[str, str]]) -> list[dict[str, str]]:
+    output = []
+    for label, field in (
+        ("Initial image set, count", "initial_images"),
+        ("Images excluded during curation, count", "excluded_images"),
+        ("Final image set, count", "final_images"),
+    ):
+        output.append(
+            {"Characteristic": label, **{dataset: rows[dataset][field] for dataset in DATASETS}}
+        )
+    output.append(
+        {
+            "Characteristic": "Pressure injury stage distribution, count (%)",
+            **{dataset: "" for dataset in DATASETS},
+        }
+    )
+    for stage in STAGES:
+        output.append(
             {
-                "dataset": metadata["dataset"],
-                "access": source_access,
-                "analysis_set": split_set,
-                "split_unit": metadata["split_unit"],
-                "n_images": sum(int(stage_distribution[stage]) for stage in STAGES),
-                "n_patients": metadata.get(f"{key}_patients", ""),
-                **{f"stage_{stage}": int(stage_distribution[stage]) for stage in STAGES},
+                "Characteristic": f"Stage {stage}",
+                **{
+                    dataset: (
+                        f'{rows[dataset][f"stage_{stage}_count"]} '
+                        f'({rows[dataset][f"stage_{stage}_percent"]})'
+                    )
+                    for dataset in DATASETS
+                },
             }
         )
-    return rows
+    return output
 
 
 def parse_args() -> argparse.Namespace:
     root = repo_root()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--piid-meta",
+        "--source",
         type=Path,
-        default=root / "data" / "splits" / "piid" / "piid_split_meta.json",
-    )
-    parser.add_argument(
-        "--humc-meta",
-        type=Path,
-        help="Optional local aggregate-only HUMC summary JSON; never included in the public release.",
-    )
-    parser.add_argument(
-        "--kaggle-root",
-        type=Path,
-        default=root / "data" / "kaggle",
-        help="Prepared Kaggle folder containing stage directories 1/2/3/4.",
+        default=root / "data" / "aggregates" / "table_1_cohort_counts.csv",
+        help="Approved aggregate-only source matching manuscript Table 1.",
     )
     parser.add_argument(
         "--output",
@@ -88,29 +123,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    piid = read_json(args.piid_meta)
-    kaggle_counts = stage_counts_from_folder(args.kaggle_root)
-
-    rows = metadata_rows(piid, "public")
-    if args.humc_meta is not None:
-        rows.extend(metadata_rows(read_json(args.humc_meta), "controlled; local summary"))
-    rows.append(
-        {
-            "dataset": "Kaggle",
-            "access": "public",
-            "analysis_set": "External validation",
-            "split_unit": "not split by this study",
-            "n_images": sum(kaggle_counts.values()),
-            "n_patients": "",
-            **{f"stage_{stage}": kaggle_counts[stage] for stage in STAGES},
-        }
-    )
-
+    table_rows = build_table(read_aggregate_source(args.source))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=("Characteristic", *DATASETS))
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(table_rows)
     print(f"[DONE] Table 1 cohort summary written to {args.output}")
 
 

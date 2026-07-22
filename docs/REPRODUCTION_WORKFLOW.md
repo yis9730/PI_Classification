@@ -27,13 +27,15 @@ The released PIID split uses a stratified image-level 15% test set and five fold
 python code/pipeline/dataset_split_normalization_humc_patient_level.py
 ```
 
-Build the public PIID/Kaggle rows of the Table 1-ready cohort/split CSV after public curation:
+Rebuild manuscript Table 1 from the released aggregate-only source:
 
 ```bash
 python code/analysis/build_cohort_summary_table.py
 ```
 
-Only an authorised project member may append HUMC rows by providing a local aggregate summary with `--humc-meta`; that input is intentionally absent from the repository.
+The source includes the PIID, HUMC, and Kaggle counts and percentages already
+reported in the manuscript. The HUMC row is a published aggregate, not a
+patient-level extract; rebuilding the table does not require private HUMC data.
 
 ## 3. Train fold-specific models
 

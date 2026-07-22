@@ -15,6 +15,7 @@ REQUIRED = [
     "requirements_train_eval.txt",
     "requirements_umap_analysis.txt",
     "README.md",
+    "data/aggregates/table_1_cohort_counts.csv",
     "code/data_curation/duplicate_pairs.csv",
     "code/data_curation/piid_duplicate_exclusions.csv",
     "code/data_curation/kaggle_duplicate_exclusions.csv",
@@ -243,6 +244,32 @@ def main() -> None:
             f"expected 10 PIID and 18 Kaggle exclusions, found {len(piid)} and {len(kaggle)}"
         )
 
+    table1_path = ROOT / "data/aggregates/table_1_cohort_counts.csv"
+    table1_rows = csv_rows(table1_path)
+    table1_by_dataset = {row.get("dataset", ""): row for row in table1_rows}
+    expected_table1 = {
+        "PIID": ("1091", "10", "1081", "229", "21.2", "311", "28.8", "273", "25.3", "268", "24.8"),
+        "HUMC": ("1906", "62", "1844", "233", "12.6", "709", "38.5", "575", "31.2", "327", "17.7"),
+        "Kaggle": ("159", "18", "141", "27", "19.1", "46", "32.6", "41", "29.1", "27", "19.1"),
+    }
+    table1_value_fields = (
+        "initial_images", "excluded_images", "final_images",
+        "stage_1_count", "stage_1_percent", "stage_2_count", "stage_2_percent",
+        "stage_3_count", "stage_3_percent", "stage_4_count", "stage_4_percent",
+    )
+    if len(table1_rows) != len(expected_table1):
+        failures.append("Table 1 aggregate source must have exactly three rows")
+    if set(table1_by_dataset) != set(expected_table1):
+        failures.append("Table 1 aggregate source must contain PIID, HUMC, and Kaggle only")
+    for dataset, expected in expected_table1.items():
+        row = table1_by_dataset.get(dataset)
+        if row is None:
+            continue
+        if set(row) != {"dataset", *table1_value_fields}:
+            failures.append(f"{dataset}: Table 1 source contains an unexpected column")
+        elif tuple(row[field] for field in table1_value_fields) != expected:
+            failures.append(f"{dataset}: Table 1 aggregate values differ from the manuscript")
+
     prohibited_fragments = [
         "C:" + chr(92) + "Users" + chr(92),
         "/storage" + "01/",
@@ -307,12 +334,13 @@ def main() -> None:
     print(f" - parsed {len(list(ROOT.rglob('*.py')))} Python files")
     print(" - 17 training conditions in each training entry point")
     print(" - 20 duplicate pairs; 10 PIID and 18 Kaggle exclusions")
+    print(" - aggregate-only Table 1 source matches the manuscript")
     print(" - PyTorch 2.9.0 / TorchVision 0.24.0 and two environment contracts locked")
     print(" - PIID is copied unchanged; Kaggle uses the native centre-square analytic crop")
     print(" - direct 224 x 224 model-input resize contracts verified")
     print(" - model-pipeline CenterCrop is confined to the centre zoom-in augmentation")
     print(" - no prohibited personal/server paths in the current scanned files")
-    print(" - Git history and commit metadata require a separate release-owner review")
+    print(" - Git history and commit metadata are outside this current-tree scan")
 
 
 if __name__ == "__main__":

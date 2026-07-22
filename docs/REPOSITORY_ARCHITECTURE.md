@@ -18,6 +18,7 @@ Each executable has one responsibility and one place in the workflow. The public
 │   └── *check*.py                       # environment/release/checkpoint checks
 ├── data/
 │   ├── {piid,kaggle,humc}/              # local images; ignored by Git
+│   ├── aggregates/                      # approved manuscript-level counts only
 │   ├── splits/                          # public PIID metadata; local HUMC outputs ignored
 │   ├── results/                         # generated, ignored by Git
 │   └── templates/                       # controlled-data input templates
