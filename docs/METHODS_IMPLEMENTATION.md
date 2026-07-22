@@ -2,7 +2,8 @@
 
 | Study method | Authoritative implementation |
 |---|---|
-| Authoritative pair decisions and exclusions | `code/data_curation/duplicate_pairs.csv`, exclusion manifests |
+| Independent raw-source feature/pixel duplicate screening and review montages | `code/data_curation/review_duplicate_candidates.py` |
+| Human-reviewed pair decisions and exclusions | `code/data_curation/duplicate_pairs.csv`, exclusion manifests |
 | PIID unchanged copy; Kaggle native short-side centre crop | `code/data_curation/prepare_public_datasets.py` |
 | Direct 224 x 224 model-input resize | `A.Resize` in `code/pipeline/*.py` |
 | Cohort and split summary (Table 1) | `code/analysis/build_cohort_summary_table.py` |

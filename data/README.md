@@ -12,7 +12,14 @@ data/
   templates/  example input files
 ```
 
-PIID and Kaggle images are prepared with `code/data_curation/prepare_public_datasets.py`. Source downloads may be stored anywhere. After applying the released exclusions, retained PIID files are copied byte-for-byte to `data/piid`; retained Kaggle images are centre-cropped to their native short-side square at native resolution and written to `data/kaggle`. The model pipelines then resize both prepared datasets directly to 224 x 224 in memory with Albumentations. The curation crop is separate from the stochastic centre-zoom augmentation.
+Raw PIID and Kaggle provider downloads are first reviewed with
+`code/data_curation/review_duplicate_candidates.py`. Its independent feature
+and pixel candidate tables and paginated montages are generated under
+`data/results/duplicate_review/`. Human review produced the released exclusion
+manifests containing 10 PIID and 18 Kaggle images; the similarity thresholds do
+not remove files automatically, and the raw sources remain unchanged.
+
+PIID and Kaggle images are then prepared with `code/data_curation/prepare_public_datasets.py`. Source downloads may be stored anywhere. After applying the released exclusions, retained PIID files are copied byte-for-byte to `data/piid`; retained Kaggle images are centre-cropped to their native short-side square at native resolution and written to `data/kaggle`. The model pipelines then resize both prepared datasets directly to 224 x 224 in memory with Albumentations. The curation crop is separate from the stochastic centre-zoom augmentation.
 
 HUMC images and every row-level split/label file remain local and are ignored
 by Git. `aggregates/table_1_cohort_counts.csv` contains only the image counts

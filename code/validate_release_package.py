@@ -20,6 +20,7 @@ REQUIRED = [
     "code/data_curation/duplicate_pairs.csv",
     "code/data_curation/piid_duplicate_exclusions.csv",
     "code/data_curation/kaggle_duplicate_exclusions.csv",
+    "code/data_curation/review_duplicate_candidates.py",
     "code/core/model_pipeline_utils.py",
     "code/pipeline/train_piid_6models_17augmentations.py",
     "code/pipeline/train_humc_6models_17augmentations.py",
@@ -91,6 +92,106 @@ def assigned_integer(tree: ast.Module, name: str) -> int | None:
     return None
 
 
+def assigned_literal(tree: ast.Module, name: str) -> object | None:
+    """Return one literal module-level assignment without executing the module."""
+    for node in tree.body:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if not any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            continue
+        try:
+            return ast.literal_eval(node.value)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def validate_duplicate_review_source(path: Path) -> list[str]:
+    """Statically lock the public raw-image duplicate-review workflow."""
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(path))
+    failures: list[str] = []
+
+    expected_literals = {
+        "FEATURE_SIMILARITY_THRESHOLD": 0.85,
+        "PIXEL_SIMILARITY_THRESHOLD": 0.85,
+        "FEATURE_INPUT_SIZE": 224,
+        "PIXEL_INPUT_SIZE": 128,
+        "EXPECTED_EXCLUSIONS": {"PIID": 10, "Kaggle": 18},
+        "EXPECTED_REVIEWED_PAIRS": {"PIID": 8, "Kaggle": 12},
+    }
+    for name, expected in expected_literals.items():
+        observed = assigned_literal(tree, name)
+        if observed != expected:
+            failures.append(
+                f"{path.name}: {name} must be {expected!r}, found {observed!r}"
+            )
+
+    required_snippets = (
+        # Feature and pixel definitions.
+        "transforms.Resize((FEATURE_INPUT_SIZE, FEATURE_INPUT_SIZE))",
+        "torch.nn.functional.normalize(features, p=2, dim=1)",
+        "scores = 1.0 - mae",
+        "/ 255.0",
+        "Image.Resampling.LANCZOS",
+        # Complete threshold-level candidate tables must remain available.
+        'output_dir / "feature_candidate_pairs.csv"',
+        'output_dir / "pixel_candidate_pairs.csv"',
+        "feature_candidates = candidate_table(table, feature_pairs, \"feature\")",
+        "pixel_candidates = candidate_table(table, pixel_pairs, \"pixel\")",
+        # The visual queue is the strongest edge for every endpoint and inherits
+        # the candidate lists' deterministic descending-similarity order.
+        "def strongest_neighbor_review_queue(",
+        "best_pair_index.setdefault(left, pair_index)",
+        "best_pair_index.setdefault(right, pair_index)",
+        "selected_indices = sorted(set(best_pair_index.values()))",
+        "pairs.sort(key=lambda item: (-item[2], item[0], item[1]))",
+        'output_dir / "feature_montage_pairs.csv"',
+        'output_dir / "pixel_montage_pairs.csv"',
+        "render_pair_review_montages(",
+        '"reviewed_pairs_covered_by_montage_queue_union"',
+        # Source/output separation and source-integrity guards.
+        "def paths_overlap(",
+        "allowed_root = (root / \"data\" / \"results\").resolve()",
+        "if paths_overlap(source, output_dir):",
+        "prepare_output_dir(",
+        "fingerprint_before = source_fingerprint(table)",
+        'collect_raw_images(piid_source, "PIID")',
+        'collect_raw_images(kaggle_source, "Kaggle")',
+        "fingerprint_after = source_fingerprint(table_after)",
+        'raise RuntimeError("A source dataset changed while duplicate review was running")',
+        # Released manual decisions remain separate from automatic screening.
+        "validate_reviewed_decisions(",
+        "seen_endpoints",
+        "declared_concordance = str(decision.source_labels_concordant).lower()",
+        "expected_outcome =",
+        'str(source["filename"]) != filename',
+        'str(source["source_folder"])',
+        '"review_flags_match_exclusion_manifests"',
+    )
+    for snippet in required_snippets:
+        if snippet not in source:
+            failures.append(
+                f"{path.name}: duplicate-review release contract is missing: {snippet}"
+            )
+
+    if source.count("pairs.sort(key=lambda item: (-item[2], item[0], item[1]))") < 2:
+        failures.append(
+            f"{path.name}: both complete candidate tables must be sorted by descending similarity"
+        )
+    for forbidden in (
+        "transforms.Resize(256)",
+        "transforms.CenterCrop",
+        "CenterCrop(",
+    ):
+        if forbidden in source:
+            failures.append(
+                f"{path.name}: duplicate screening contains a forbidden crop/resize: {forbidden}"
+            )
+    return failures
+
+
 def validate_training_seed_contract(path: Path) -> list[str]:
     """Check the study-wide seed and fold-local loader shuffle contract."""
     content = path.read_text(encoding="utf-8")
@@ -126,6 +227,8 @@ def main() -> None:
 
     feature_source = (ROOT / "code/analysis/extract_resnet18_features.py").read_text(encoding="utf-8")
     curation_source = (ROOT / "code/data_curation/prepare_public_datasets.py").read_text(encoding="utf-8")
+    duplicate_review_path = ROOT / "code/data_curation/review_duplicate_candidates.py"
+    failures.extend(validate_duplicate_review_source(duplicate_review_path))
     if "transforms.Resize((224, 224))" not in feature_source:
         failures.append("manuscript feature extraction must resize directly to 224 x 224")
     if "transforms.Resize(256)" in feature_source or "transforms.CenterCrop" in feature_source:
@@ -274,6 +377,72 @@ def main() -> None:
             f"expected 10 PIID and 18 Kaggle exclusions, found {len(piid)} and {len(kaggle)}"
         )
 
+    expected_pair_counts = {"PIID": 8, "Kaggle": 12}
+    observed_pair_counts = {
+        dataset: sum(row.get("dataset") == dataset for row in pairs)
+        for dataset in expected_pair_counts
+    }
+    if observed_pair_counts != expected_pair_counts:
+        failures.append(
+            "duplicate pair counts must be PIID 8 and Kaggle 12; "
+            f"found {observed_pair_counts}"
+        )
+    unexpected_pair_datasets = sorted(
+        {row.get("dataset", "") for row in pairs} - set(expected_pair_counts)
+    )
+    if unexpected_pair_datasets:
+        failures.append(
+            f"duplicate_pairs.csv contains unexpected datasets: {unexpected_pair_datasets}"
+        )
+    pair_ids = [row.get("pair_id", "") for row in pairs]
+    if any(not pair_id for pair_id in pair_ids) or len(set(pair_ids)) != len(pair_ids):
+        failures.append("duplicate_pairs.csv pair_id values must be non-empty and unique")
+
+    exclusion_rows = {"PIID": piid, "Kaggle": kaggle}
+    exclusion_ids: dict[str, set[str]] = {}
+    for dataset, rows in exclusion_rows.items():
+        names = [row.get("filename", "") for row in rows]
+        normalized = [Path(name).stem.casefold() for name in names if name]
+        if len(normalized) != len(rows):
+            failures.append(f"{dataset}: exclusion manifest contains a blank filename")
+        if len(set(normalized)) != len(normalized):
+            failures.append(f"{dataset}: exclusion manifest contains duplicate filenames")
+        if any(row.get("dataset") != dataset for row in rows):
+            failures.append(f"{dataset}: exclusion manifest dataset column changed")
+        exclusion_ids[dataset] = set(normalized)
+
+    flagged_endpoints: dict[str, set[str]] = {
+        dataset: set() for dataset in expected_pair_counts
+    }
+    for row in pairs:
+        dataset = row.get("dataset", "")
+        if dataset not in flagged_endpoints:
+            continue
+        for side in ("1", "2"):
+            flag = row.get(f"excluded_image_{side}", "").casefold()
+            image_id = row.get(f"image_{side}", "")
+            if flag not in {"yes", "no"}:
+                failures.append(
+                    f"{row.get('pair_id', '<unknown>')}: excluded_image_{side} must be yes/no"
+                )
+                continue
+            if not image_id:
+                failures.append(
+                    f"{row.get('pair_id', '<unknown>')}: image_{side} is blank"
+                )
+                continue
+            if flag == "yes":
+                flagged_endpoints[dataset].add(Path(image_id).stem.casefold())
+
+    for dataset in expected_pair_counts:
+        if flagged_endpoints[dataset] != exclusion_ids.get(dataset, set()):
+            missing = sorted(exclusion_ids.get(dataset, set()) - flagged_endpoints[dataset])
+            extra = sorted(flagged_endpoints[dataset] - exclusion_ids.get(dataset, set()))
+            failures.append(
+                f"{dataset}: flagged duplicate-pair endpoints do not exactly match the "
+                f"exclusion manifest (missing={missing}, extra={extra})"
+            )
+
     figure4_reference = csv_rows(ROOT / "data/reference/figure4_public_mean_representatives.csv")
     if len(figure4_reference) != 24:
         failures.append(
@@ -372,6 +541,8 @@ def main() -> None:
     print(f" - parsed {len(list(ROOT.rglob('*.py')))} Python files")
     print(" - 17 training conditions in each training entry point")
     print(" - 20 duplicate pairs; 10 PIID and 18 Kaggle exclusions")
+    print(" - raw-image feature/pixel candidate and strongest-neighbour montage contracts locked")
+    print(" - duplicate-pair exclusion flags exactly match both released manifests")
     print(" - aggregate-only Table 1 source matches the manuscript")
     print(" - PyTorch 2.9.0 / TorchVision 0.24.0 and two environment contracts locked")
     print(" - PIID is copied unchanged; Kaggle uses a native short-side centre crop")

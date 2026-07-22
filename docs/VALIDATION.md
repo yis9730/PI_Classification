@@ -5,6 +5,15 @@ five-fold retraining run.
 
 - Static release validation passed: Python syntax, required files, 17 conditions per trainer, dependency locks, duplicate counts, private-path scan, and private HUMC split scan.
 - The released Table 1 source contains only the three datasets' manuscript counts and stage percentages; its HUMC row has no patient-level or image-level field.
+- The raw-source duplicate-review entry point validates 1,091 PIID and 159
+  Kaggle provider images, runs independent feature and pixel all-pairs searches
+  at `0.85`, and writes complete descending candidate CSVs plus strongest-pair
+  montage queues. The full run produced 6,473 feature candidates and 299,913
+  pixel candidates; the nonredundant montage queues contained 694 and 1,151
+  pairs, respectively. All 20 released human-reviewed pairs occurred in both
+  the complete-candidate union and the montage-queue union. The released
+  decisions excluded 10 PIID and 18 Kaggle images, and the source fingerprint
+  was unchanged.
 - The public PIID/Kaggle curation workflow was executed from the downloaded source folders. After the 28 released exclusions, all 1,081 retained PIID files were SHA-256-identical to source. All 141 generated Kaggle images had dimensions and decoded-pixel SHA-256 values identical to the archived analytic dataset; 135 rectangular retained images were native-square cropped and six were already square. The expected stage counts passed.
 - The local checkpoint archive contained 102 PIID-trained and 102 HUMC-trained run folders. Each contained exactly five fold weights (510 weights per training source).
 - Fold 1 of the no-augmentation condition for all six architectures was strictly loaded for both PIID-trained and HUMC-trained archives: 12 representative checkpoints with no missing or unexpected state-dictionary keys.

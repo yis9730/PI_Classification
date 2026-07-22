@@ -3,7 +3,8 @@
 This script does three things:
 
 1. Reads the public raw PIID and Kaggle stage folders.
-2. Excludes duplicate or near-duplicate files listed in the released manifests.
+2. Applies the exclusion manifests produced by the released human-reviewed
+   feature/pixel duplicate decisions.
 3. Copies retained PIID files byte-for-byte and centre-crops retained Kaggle
    images to the native short-side square without resizing. The classification
    pipeline performs the direct 224 x 224 model-input resize later in memory.

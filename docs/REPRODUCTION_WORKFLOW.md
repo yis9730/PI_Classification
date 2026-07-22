@@ -2,7 +2,30 @@
 
 Run commands from the repository root. Use the main environment unless a step explicitly says `umap`.
 
-## 1. Prepare public datasets
+## 1. Review duplicate candidates and prepare public datasets
+
+Run both independent candidate screens on the raw PIID and Kaggle provider
+folders:
+
+```bash
+python code/data_curation/review_duplicate_candidates.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite
+```
+
+The feature screen uses L2-normalized ResNet-18 vectors from directly resized
+`224 x 224` inputs and cosine similarity `>= 0.85`. The pixel screen separately
+uses directly resized `128 x 128` RGB arrays and `1 - MAE >= 0.85`. Complete
+candidate CSVs are sorted from `1.00` down to `0.85`. The paginated montage
+queue is the union of each candidate image's strongest pair, also in descending
+similarity order.
+
+Review the generated montages under `data/results/duplicate_review/`. The
+threshold identifies images for human inspection; it does not automatically
+remove them. The released visual decisions select 10 PIID and 18 Kaggle images
+for exclusion. The script confirms that all 20 reviewed pairs occur in the
+union of the independent candidate tables and verifies that the raw sources
+remain unchanged.
+
+Apply the reviewed exclusion manifests and build the analytic folders:
 
 ```bash
 python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite

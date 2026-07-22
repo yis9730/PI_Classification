@@ -43,12 +43,28 @@ Download the source datasets from their original providers:
 Run the following in the main environment:
 
 ```bash
+python code/data_curation/review_duplicate_candidates.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite
+
 python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID --kaggle-source /path/to/Kaggle --overwrite
 
 python code/pipeline/dataset_split_normalization_piid_main.py --use-existing
 ```
 
-The curation script applies the released duplicate exclusions. Retained PIID
+The review script reads the raw provider images before any exclusion or square
+curation. It independently screens every pair with two thresholds: cosine
+similarity of L2-normalized ResNet-18 features extracted after a direct `224 x
+224` resize, and RGB pixel similarity `1 - MAE` after a direct `128 x 128`
+resize. Both thresholds are `0.85`. The complete feature and pixel CSVs are
+sorted from `1.00` down to `0.85`. Each montage queue is the union of every
+candidate image's strongest pair and is paginated in the same descending order.
+
+The thresholds define candidates for visual review; they do not determine
+which files are removed. Human review produced the released decisions in
+`duplicate_pairs.csv` and the exclusion manifests: 10 PIID images and 18
+Kaggle images. The review script verifies those decisions and leaves every
+source file unchanged.
+
+The preparation script then applies the released exclusions. Retained PIID
 files are copied byte-for-byte. Retained Kaggle images are centre-cropped to
 their native short-side square at native resolution. The model pipeline later
 maps both datasets directly to `224 x 224` in memory with Albumentations. The
@@ -135,7 +151,7 @@ The public two-dataset commands produce a partial Figure 4 montage. An authorise
 ```text
 code/
   core/            shared paths, model factory, parameter reference
-  data_curation/   public data preparation and duplicate decisions
+  data_curation/   duplicate review, released decisions, public data preparation
   pipeline/        splits, training, internal/external evaluation
   analysis/        statistics and feature-space numerical analysis
   visualization/   manuscript-facing figures, including UMAP and Sankey

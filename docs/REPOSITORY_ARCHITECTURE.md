@@ -2,7 +2,7 @@
 
 ## Design rule
 
-Each executable has one responsibility and one place in the workflow. The public repository excludes notebook checkpoints, server-specific copies, intermediate experiments, and ambiguous duplicate scripts. The curated release replaces the former broad `development`/`experiment` grouping with `core` and `pipeline`, making the execution order evident from the directory tree.
+Each executable has one responsibility and one place in the workflow. The public repository excludes notebook checkpoints, server-specific copies, and intermediate experiments. One documented data-curation entry point generates the independent feature/pixel candidate tables and review montages. The curated release replaces the former broad `development`/`experiment` grouping with `core` and `pipeline`, making the execution order evident from the directory tree.
 
 ```text
 .
@@ -11,7 +11,7 @@ Each executable has one responsibility and one place in the workflow. The public
 ├── requirements_umap_analysis.txt      # UMAP-only environment
 ├── code/
 │   ├── core/                            # paths, model factory, model metadata
-│   ├── data_curation/                   # dataset assembly and exclusion decisions
+│   ├── data_curation/                   # duplicate review, decisions, dataset assembly
 │   ├── pipeline/                        # splits → training → evaluation
 │   ├── analysis/                        # numerical summaries and inferential tests
 │   ├── visualization/                   # manuscript-facing plots
@@ -29,7 +29,7 @@ Each executable has one responsibility and one place in the workflow. The public
 
 | Step | Owner directory | Main input | Main generated output |
 |---|---|---|---|
-| Public image curation | `code/data_curation` | original PIID/Kaggle downloads | prepared images and curation manifests |
+| Public image curation | `code/data_curation` | raw PIID/Kaggle provider downloads | feature/pixel candidate CSVs, review montages, and prepared images |
 | PIID/HUMC split creation | `code/pipeline` | prepared images; controlled HUMC labels | split tables and normalisation statistics |
 | Model development | `code/pipeline` + `code/core` | splits and images | fold-specific checkpoints and training records |
 | Internal/external validation | `code/pipeline` | checkpoints and test/external images | fold-specific prediction CSVs |

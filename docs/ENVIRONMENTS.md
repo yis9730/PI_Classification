@@ -4,7 +4,7 @@ The project uses two pinned environments because the recorded workflows have inc
 
 | Environment | Requirements file | Purpose | Key compatibility constraint |
 |---|---|---|---|
-| Main environment | `requirements_train_eval.txt` | curation, split generation, training, evaluation, statistical analysis, Sankey, centroid montage | NumPy 2.2.6 with OpenCV 4.12.0.88 |
+| Main environment | `requirements_train_eval.txt` | duplicate candidate review, curation, split generation, training, evaluation, statistical analysis, Sankey, centroid montage | NumPy 2.2.6 with OpenCV 4.12.0.88 |
 | UMAP environment | `requirements_umap_analysis.txt` | Main Figure 3 UMAP from pre-exported features | NumPy 1.26.4 with numba 0.60.0 and UMAP 0.5.6 |
 
 ## Create the main environment

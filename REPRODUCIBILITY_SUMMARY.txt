@@ -12,6 +12,13 @@ Environment
 
 Data preparation
 - Four stages: 1, 2, 3, 4
+- Screen raw PIID/Kaggle provider images independently at feature cosine
+  similarity >= 0.85 and pixel similarity 1 - MAE >= 0.85
+- Feature comparison: direct 224 x 224 resize, ImageNet normalization,
+  L2-normalized ResNet-18 vectors
+- Pixel comparison: direct 128 x 128 RGB resize
+- Save complete candidate CSVs from 1.00 down to 0.85; paginate the union of
+  each candidate image's strongest pair in descending-similarity montages
 - Apply the released duplicate-exclusion manifests
 - Copy retained PIID files byte-for-byte
 - Centre-crop retained Kaggle images to their native short-side square at
@@ -19,11 +26,15 @@ Data preparation
 - Final public data: PIID 1,081 images; Kaggle 141 images
 
 Duplicate curation
+- The 0.85 thresholds create independent visual-review queues, not automatic
+  deletion lists
+- Human montage review determines the released decisions
 - 20 reviewed public-data pairs (40 images)
 - 12 concordant-pair exclusions; one representative retained per pair
 - 16 discordant-pair exclusions; both conflicting images excluded
 - Total excluded: 28 images (PIID 10; Kaggle 18)
 - Exact pair decisions: code/data_curation/duplicate_pairs.csv
+- Candidate generation does not change or delete source files
 
 Training
 - Six architectures: ResNet-50, DenseNet-121, EfficientNetV2-S, ViT-B/16,

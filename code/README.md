@@ -8,6 +8,9 @@
 
 ## `data_curation`
 
+- `review_duplicate_candidates.py`: independent raw-source feature/pixel
+  similarity screens, complete descending candidate CSVs, strongest-pair
+  review montages, and verification of the released human decisions.
 - `prepare_public_datasets.py`: released exclusions and byte-preserving copies of retained PIID/Kaggle source files.
 - `duplicate_pairs.csv` and `*_duplicate_exclusions.csv`: reviewed decisions and executable public exclusion manifests.
 
