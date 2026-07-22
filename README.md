@@ -50,27 +50,14 @@ python code/data_curation/prepare_public_datasets.py --piid-source /path/to/PIID
 python code/pipeline/dataset_split_normalization_piid_main.py --use-existing
 ```
 
-The review script reads the raw provider images before any exclusion or square
-curation. It independently screens every pair with two thresholds: cosine
-similarity of L2-normalized ResNet-18 features extracted after a direct `224 x
-224` resize, and RGB pixel similarity `1 - MAE` after a direct `128 x 128`
-resize. Both thresholds are `0.85`. The complete feature and pixel CSVs are
-sorted from `1.00` down to `0.85`. Each montage queue is the union of every
-candidate image's strongest pair and is paginated in the same descending order.
+The review command generates feature- and pixel-similarity candidate lists and
+montages for manual review. The released decisions and exclusion manifests
+remove 10 PIID images and 18 Kaggle images.
 
-The thresholds define candidates for visual review; they do not determine
-which files are removed. Human review produced the released decisions in
-`duplicate_pairs.csv` and the exclusion manifests: 10 PIID images and 18
-Kaggle images. The review script verifies those decisions and leaves every
-source file unchanged.
-
-The preparation script then applies the released exclusions. Retained PIID
-files are copied byte-for-byte. Retained Kaggle images are centre-cropped to
-their native short-side square at native resolution. The model pipeline later
-maps both datasets directly to `224 x 224` in memory with Albumentations. The
-stochastic `A.CenterCrop` belongs only to the centre-zoom training augmentation. The
-script validates the target counts (PIID 1,081; Kaggle 141) and rejects
-source/output overlap, unexpected raw counts, and unmatched exclusion entries.
+The preparation command applies these exclusions to reconstruct the public
+analytic datasets (PIID 1,081; Kaggle 141). Retained PIID files are copied
+unchanged, while retained Kaggle images are centre-cropped to their native
+short-side square; model-input resizing is handled later in the pipeline.
 
 ## Core study pipeline
 
