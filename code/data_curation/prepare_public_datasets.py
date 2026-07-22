@@ -4,7 +4,9 @@ This script does three things:
 
 1. Reads the public raw PIID and Kaggle stage folders.
 2. Excludes duplicate or near-duplicate files listed in the released manifests.
-3. Center-crops each image to a square and resizes it to 224 x 224 by default.
+3. Copies retained PIID files unchanged and creates the study's native-size
+   centre-square Kaggle analytic images. The Kaggle step crops only the longer
+   axis; it does not resize to 256 or 224 pixels.
 
 It never deletes source images. The generated datasets are written to:
 
@@ -20,12 +22,11 @@ Expected final counts:
 from __future__ import annotations
 
 import argparse
-import csv
 import shutil
 from pathlib import Path
 
 import pandas as pd
-from PIL import Image, ImageOps
+from PIL import Image
 from tqdm import tqdm
 
 
@@ -76,42 +77,88 @@ def iter_images(folder: Path) -> list[Path]:
     )
 
 
-def center_crop_square(image: Image.Image) -> Image.Image:
-    """Center-crop a PIL image to the largest possible square."""
-    width, height = image.size
-    side = min(width, height)
-    left = (width - side) // 2
-    top = (height - side) // 2
-    return image.crop((left, top, left + side, top + side))
-
-
-def save_square_image(src: Path, dst: Path, image_size: int) -> tuple[int, int]:
-    """Load an image, square-crop, resize, and save it."""
+def copy_source_image(src: Path, dst: Path) -> tuple[int, int]:
+    """Validate an image, then copy the retained source file byte-for-byte."""
     with Image.open(src) as image:
-        image = ImageOps.exif_transpose(image).convert("RGB")
-        image = center_crop_square(image)
-        if image_size:
-            image = image.resize((image_size, image_size), Image.Resampling.LANCZOS)
+        width, height = image.size
+        image.verify()
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return width, height
+
+
+def crop_kaggle_native_square(src: Path, dst: Path) -> tuple[int, int]:
+    """Centre-crop the longer axis without resizing the retained Kaggle image."""
+    with Image.open(src) as image:
+        image.load()
+        width, height = image.size
+        side = min(width, height)
+        left = (width - side) // 2
+        top = (height - side) // 2
+        square = image.crop((left, top, left + side, top + side))
+        save_kwargs: dict[str, object] = {}
+        if image.info.get("icc_profile"):
+            save_kwargs["icc_profile"] = image.info["icc_profile"]
+        if image.info.get("exif"):
+            save_kwargs["exif"] = image.info["exif"]
         dst.parent.mkdir(parents=True, exist_ok=True)
-        image.save(dst, quality=95)
-        return image.size
+        square.save(dst, format=image.format, **save_kwargs)
+    return side, side
+
+
+def paths_overlap(first: Path, second: Path) -> bool:
+    """Return True when either resolved path contains the other."""
+    first = first.expanduser().resolve()
+    second = second.expanduser().resolve()
+    return first == second or first in second.parents or second in first.parents
+
+
+def validate_source_output_separation(
+    piid_source: Path,
+    kaggle_source: Path,
+    output_root: Path,
+) -> None:
+    """Prevent output cleanup or writes from touching either source tree."""
+    sources = {"PIID": piid_source, "Kaggle": kaggle_source}
+    outputs = {
+        "PIID output": output_root / "piid",
+        "Kaggle output": output_root / "kaggle",
+    }
+    for source_label, source in sources.items():
+        for output_label, output in outputs.items():
+            if paths_overlap(source, output):
+                raise ValueError(
+                    f"Unsafe overlapping paths: {source_label} source {source.resolve()} "
+                    f"and {output_label} {output.resolve()}"
+                )
 
 
 def reset_output_dir(output_dir: Path, overwrite: bool) -> None:
     """Create a clean output directory only when overwrite is explicitly requested."""
-    if output_dir.exists() and overwrite:
-        shutil.rmtree(output_dir)
+    if output_dir.exists():
+        if not output_dir.is_dir():
+            raise NotADirectoryError(f"Output path is not a directory: {output_dir}")
+        if overwrite:
+            shutil.rmtree(output_dir)
+        elif any(output_dir.iterdir()):
+            raise FileExistsError(
+                f"Output directory is not empty: {output_dir}. "
+                "Choose another output root or rerun with --overwrite."
+            )
     output_dir.mkdir(parents=True, exist_ok=True)
+    placeholder = output_dir / ".gitkeep"
+    if not placeholder.exists():
+        placeholder.write_bytes(b"\n")
 
 
 def build_piid(
     source_root: Path,
     output_root: Path,
     exclusion_csv: Path,
-    image_size: int,
 ) -> pd.DataFrame:
     """Build PIID analytic stage folders and return a manifest DataFrame."""
     exclusions = read_exclusions(exclusion_csv, ("stage", "filename"))
+    matched_exclusions: set[tuple[str, ...]] = set()
     records: list[dict[str, object]] = []
     piid_output = output_root / "piid"
 
@@ -119,10 +166,19 @@ def build_piid(
         src_dir = source_root / folder_name
         dst_dir = piid_output / stage
         images = iter_images(src_dir)
+        expected_raw = EXPECTED_COUNTS["PIID"][stage] + sum(
+            key[0] == stage for key in exclusions
+        )
+        if len(images) != expected_raw:
+            raise RuntimeError(
+                f"PIID stage {stage}: expected {expected_raw} source images, got {len(images)}"
+            )
 
         for src in tqdm(images, desc=f"PIID stage {stage}"):
-            excluded = (stage, src.name) in exclusions
+            key = (stage, src.name)
+            excluded = key in exclusions
             if excluded:
+                matched_exclusions.add(key)
                 records.append({
                     "dataset": "PIID",
                     "stage": int(stage),
@@ -134,7 +190,7 @@ def build_piid(
                 continue
 
             dst = dst_dir / src.name
-            width, height = save_square_image(src, dst, image_size)
+            width, height = copy_source_image(src, dst)
             records.append({
                 "dataset": "PIID",
                 "stage": int(stage),
@@ -142,10 +198,14 @@ def build_piid(
                 "output_path": dst.as_posix(),
                 "excluded": False,
                 "reason": "",
+                "operation": "copied_unchanged",
                 "width": width,
                 "height": height,
             })
 
+    unmatched = exclusions - matched_exclusions
+    if unmatched:
+        raise RuntimeError(f"PIID exclusion entries not found in source folders: {sorted(unmatched)}")
     return pd.DataFrame(records)
 
 
@@ -153,10 +213,10 @@ def build_kaggle(
     source_root: Path,
     output_root: Path,
     exclusion_csv: Path,
-    image_size: int,
 ) -> pd.DataFrame:
     """Build Kaggle analytic stage folders and return a manifest DataFrame."""
     exclusions = read_exclusions(exclusion_csv, ("stage", "source_folder", "filename"))
+    matched_exclusions: set[tuple[str, ...]] = set()
     records: list[dict[str, object]] = []
     kaggle_output = output_root / "kaggle"
 
@@ -164,10 +224,19 @@ def build_kaggle(
         src_dir = source_root / source_folder
         dst_dir = kaggle_output / stage
         images = iter_images(src_dir)
+        expected_raw = EXPECTED_COUNTS["Kaggle"][stage] + sum(
+            key[0] == stage for key in exclusions
+        )
+        if len(images) != expected_raw:
+            raise RuntimeError(
+                f"Kaggle stage {stage}: expected {expected_raw} source images, got {len(images)}"
+            )
 
         for src in tqdm(images, desc=f"Kaggle stage {stage}"):
-            excluded = (stage, source_folder, src.name) in exclusions
+            key = (stage, source_folder, src.name)
+            excluded = key in exclusions
             if excluded:
+                matched_exclusions.add(key)
                 records.append({
                     "dataset": "Kaggle",
                     "stage": int(stage),
@@ -180,7 +249,7 @@ def build_kaggle(
                 continue
 
             dst = dst_dir / src.name
-            width, height = save_square_image(src, dst, image_size)
+            width, height = crop_kaggle_native_square(src, dst)
             records.append({
                 "dataset": "Kaggle",
                 "stage": int(stage),
@@ -189,10 +258,14 @@ def build_kaggle(
                 "output_path": dst.as_posix(),
                 "excluded": False,
                 "reason": "",
+                "operation": "native_center_square_crop",
                 "width": width,
                 "height": height,
             })
 
+    unmatched = exclusions - matched_exclusions
+    if unmatched:
+        raise RuntimeError(f"Kaggle exclusion entries not found in source folders: {sorted(unmatched)}")
     return pd.DataFrame(records)
 
 
@@ -240,12 +313,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Output root for PIID and Kaggle analytic datasets.",
     )
     parser.add_argument(
-        "--image-size",
-        type=int,
-        default=224,
-        help="Square output size. Use 0 to keep square-cropped native size.",
-    )
-    parser.add_argument(
         "--overwrite",
         action="store_true",
         help="Delete existing output piid/kaggle folders before rebuilding.",
@@ -258,6 +325,7 @@ def main() -> None:
     args = build_arg_parser().parse_args()
 
     output_root = args.output_root
+    validate_source_output_separation(args.piid_source, args.kaggle_source, output_root)
     reset_output_dir(output_root / "piid", args.overwrite)
     reset_output_dir(output_root / "kaggle", args.overwrite)
 
@@ -268,13 +336,11 @@ def main() -> None:
         source_root=args.piid_source,
         output_root=output_root,
         exclusion_csv=root / "code" / "data_curation" / "piid_duplicate_exclusions.csv",
-        image_size=args.image_size,
     )
     kaggle_manifest = build_kaggle(
         source_root=args.kaggle_source,
         output_root=output_root,
         exclusion_csv=root / "code" / "data_curation" / "kaggle_duplicate_exclusions.csv",
-        image_size=args.image_size,
     )
 
     piid_manifest.to_csv(manifest_dir / "piid_curation_manifest.csv", index=False)

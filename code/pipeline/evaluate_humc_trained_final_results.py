@@ -27,7 +27,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 from albumentations.pytorch import ToTensorV2
-from PIL import Image, ImageOps
+from PIL import Image
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -44,9 +44,9 @@ from tqdm import tqdm
 
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
-DEVELOPMENT_DIR = CODE_ROOT / "development"
-if str(DEVELOPMENT_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVELOPMENT_DIR))
+CORE_DIR = CODE_ROOT / "core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
 from model_pipeline_utils import get_model  # noqa: E402
 from path_config import (  # noqa: E402
@@ -110,7 +110,7 @@ class AlbImageDataset(Dataset):
         path = self.image_paths[idx]
         label = int(self.labels[idx])
         with Image.open(path) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             image = np.asarray(image)
         if self.transform is not None:
             image = self.transform(image=image)["image"]
@@ -162,6 +162,22 @@ def load_stage_folder_dataset(root: Path) -> tuple[list[str], list[int]]:
     if not paths:
         raise RuntimeError(f"No images found under: {root}")
     return paths, labels
+
+
+def stage_folder_dataset_available(root: Path) -> bool:
+    """Return True only when every required stage contains an image."""
+    if not root.is_dir():
+        return False
+    for stage in CLASS_NAMES:
+        stage_dir = root / stage
+        if not stage_dir.is_dir():
+            return False
+        if not any(
+            path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+            for path in stage_dir.iterdir()
+        ):
+            return False
+    return True
 
 
 def calculate_specificity(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
@@ -293,10 +309,10 @@ def main() -> None:
         "PIID": PIID_DATA_DIR,
         "Kaggle": KAGGLE_DATA_DIR,
     }.items():
-        if dataset_root.exists():
+        if stage_folder_dataset_available(dataset_root):
             eval_sets[dataset_name] = load_stage_folder_dataset(dataset_root)
         else:
-            print(f"[SKIP] Optional dataset not found: {dataset_root}")
+            print(f"[SKIP] Optional dataset unavailable or incomplete: {dataset_root}")
     print({name: len(paths) for name, (paths, _) in eval_sets.items()})
 
     foldwise_rows = []
@@ -320,7 +336,7 @@ def main() -> None:
                     dropout_rate=args.dropout,
                 )
                 state = torch.load(ckpt, map_location=device)
-                model.load_state_dict(state)
+                model.load_state_dict(state, strict=True)
                 model.to(device)
 
                 stats = norm_stats[fold_id]

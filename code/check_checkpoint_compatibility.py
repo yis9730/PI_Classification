@@ -14,9 +14,9 @@ from pathlib import Path
 import torch
 
 CODE_ROOT = Path(__file__).resolve().parent
-DEVELOPMENT_DIR = CODE_ROOT / "development"
-if str(DEVELOPMENT_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVELOPMENT_DIR))
+CORE_DIR = CODE_ROOT / "core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
 from model_pipeline_utils import FINAL_BASELINE_BACKBONES, get_model  # noqa: E402
 from path_config import CHECKPOINT_ROOT  # noqa: E402

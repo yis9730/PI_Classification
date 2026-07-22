@@ -1,19 +1,21 @@
 PRESSURE INJURY CLASSIFICATION: PUBLIC REPRODUCIBILITY SUMMARY
 
 Environment
-- Python 3.11
-- PyTorch 2.9.0
-- TorchVision 0.24.0
-- timm 1.0.22
+- Two intentionally separate environments; see docs/ENVIRONMENTS.md
+- main environment: Python 3.11, PyTorch 2.9.0, TorchVision 0.24.0, timm 1.0.22,
+  NumPy 2.2.6, OpenCV 4.12.0.88
+- umap: NumPy 1.26.4, numba 0.60.0, umap-learn 0.5.6; used only after
+  ResNet-18 feature export to draw Main Figure 3
 - Study base random seed: 40
 - Train/test and five-fold partition random seed: 40
 - DataLoader shuffle generator: 40 + fold index (fold-local ordering only)
 
 Data preparation
 - Four stages: 1, 2, 3, 4
-- Correct EXIF orientation
-- Crop the largest square around the image center / midpoint of the long axis
-- Resize the square to 224 x 224
+- Apply the released duplicate-exclusion manifests
+- Copy retained PIID files unchanged
+- Centre-crop the longer axis of retained Kaggle files to the native square
+  analytic frame used in the study; do not resize them during curation
 - Final public data: PIID 1,081 images; Kaggle 141 images
 
 Duplicate curation
@@ -28,6 +30,12 @@ Training
   Swin-T, ConvNeXt-S
 - 17 conditions: no augmentation plus 16 augmentation conditions
 - Five folds
+- Load source images as RGB and resize every model input directly to 224 x 224
+  with Albumentations `A.Resize(224, 224)`
+- In the model pipeline, `A.CenterCrop` is used only in the named centre
+  zoom-in augmentation. The separate Kaggle curation crop is a deterministic
+  native-size square crop and does not use Albumentations.
+- The training loader uses `drop_last=True`, matching the study loop
 - AdamW, weighted cross entropy, batch size 16, learning rate 1e-5,
   weight decay 1e-4, maximum 50 epochs, early-stopping patience 20
 - Study-trained classification weights are not distributed; visitors train
@@ -38,8 +46,9 @@ Validation
   and Kaggle external validation
 - HUMC-trained: HUMC patient-held-out internal test, PIID external validation,
   and Kaggle external validation
-- HUMC code is public; HUMC images, identifiers, labels, and image-level splits
-  are private and are not included
+- HUMC code and the counts/percentages already reported in Table 1 are public
+- HUMC images, patient-level rows, identifiers, labels, image-level splits,
+  normalisation values, checkpoints, and predictions remain private
 
 Analysis
 - Fold-specific predictions are retained; no fold prediction ensemble is used
@@ -49,6 +58,8 @@ Analysis
 - Fold-averaged confusion Sankey visualization
 - Frozen ResNet-18 512-dimensional feature workflow; see
   docs/RESNET18_FEATURES.md for the required checkpoint SHA-256
+- Main-artifact command and access contract: docs/MAIN_ARTIFACTS.md
+- End-to-end execution order: docs/REPRODUCTION_WORKFLOW.md
 
 Before publication
 - Run: python code/validate_release_package.py

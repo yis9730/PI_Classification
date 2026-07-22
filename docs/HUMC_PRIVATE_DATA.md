@@ -1,23 +1,32 @@
-# HUMC private-data boundary
+# HUMC controlled-data boundary
 
-HUMC contains non-public hospital images and patient-linked metadata. This repository releases executable code but must not contain:
+HUMC is not an open dataset. The only HUMC-derived file approved for the
+current public release is `data/aggregates/table_1_cohort_counts.csv`. Its HUMC
+row contains only the initial, excluded, and final image counts plus the four
+stage counts and percentages already reported in manuscript Table 1.
 
-- clinical images or thumbnails;
-- label workbooks;
-- patient or encounter identifiers;
-- image-level train/test tables;
-- fold membership files that expose image or patient membership;
-- prediction files containing private image paths.
+The public aggregate contains no patient-level row, name, medical-record or
+encounter number, image identifier, filename or path, date, split membership,
+clinical attribute, or prediction. Known historical HUMC data blobs reviewed
+for this release contain de-identified total/train/test patient and image
+counts, stage counts, fold-level RGB normalisation summaries, and a synthetic
+template row. No identified or row-level HUMC data blob was found in that
+review. These older aggregates remain reachable unless Git history is
+rewritten, although they are intentionally absent from the current release
+tree.
 
-Authorized local layout:
+The paper reports the HUMC cohort and its results. Reproducing the HUMC-dependent portions of the study requires a separate institutional authorisation process and a local controlled-data workspace. This repository is not a data-access mechanism.
+
+An authorised project member keeps all controlled inputs and outputs outside Git, including local files under these ignored locations:
 
 ```text
-data/humc/{1,2,3,4}/
-data/humc/labels.xlsx
+data/humc/
+data/splits/humc/
+data/results/
 ```
 
-The analytic HUMC images must undergo the same orientation correction, center-square crop around the midpoint of the long axis, and 224 x 224 resize as the public datasets before split generation or model use.
-
-The public aggregate record reports 1,844 images from 500 patients, with 1,556 images/425 patients in train-validation and 288 images/75 patients in the held-out test. The held-out split and five folds are patient-disjoint. Only `split_meta_public.json` and `normalization_stats.csv` are released.
-
-The default patient identifier column is `등록번호`; command-line arguments permit a site-local schema without source edits. All HUMC local files and outputs should be reviewed again before any public commit.
+The HUMC pipeline is retained so an authorised holder can execute the same
+patient-grouped split, training, and evaluation logic locally. Before any
+future public release, confirm that the approved Table 1 aggregate is the only
+HUMC-derived data file staged. Normalisation values and every row-level or
+image-level output remain controlled.

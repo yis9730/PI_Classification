@@ -17,12 +17,9 @@ data/kaggle/*
 data/humc/*
 !data/humc/.gitkeep
 
-# Private HUMC image-level split material; retain privacy-safe public files
-data/splits/humc/all_images.csv
-data/splits/humc/trainval_set.csv
-data/splits/humc/test_set.csv
-data/splits/humc/fold_indices.json
-data/splits/humc/split_meta.json
+# All controlled HUMC data and every HUMC-derived split/normalisation artifact
+data/splits/humc/
+data/templates/humc_label_template.csv
 
 # Generated results and large model files
 data/results/*

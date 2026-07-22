@@ -1,9 +1,8 @@
 """Extract the frozen 512-D ResNet-18 features used in feature-space analyses.
 
-Unlike duplicate screening, this analysis preserves the raw pooled 512-D
-vectors (no L2 normalization) and directly resizes images to 224 x 224. These
-vectors are shared by the UMAP, silhouette, centroid-distance, and
-representative-image analyses.
+This analysis preserves the raw pooled 512-D vectors (no L2 normalization)
+and directly resizes images to 224 x 224. These vectors are shared by the
+UMAP, silhouette, centroid-distance, and representative-image analyses.
 """
 
 from __future__ import annotations
@@ -18,15 +17,15 @@ import numpy as np
 import pandas as pd
 import timm
 import torch
-from PIL import Image, ImageOps
+from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
-DEVELOPMENT_DIR = CODE_ROOT / "development"
-if str(DEVELOPMENT_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVELOPMENT_DIR))
+CORE_DIR = CODE_ROOT / "core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
 from path_config import RESNET18_FEATURE_WEIGHT, TABLE_ROOT  # noqa: E402
 
@@ -87,7 +86,7 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index: int) -> torch.Tensor:
         with Image.open(self.paths[index]) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             return self.transform(image)
 
 

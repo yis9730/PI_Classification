@@ -1,13 +1,11 @@
-"""Train the HUMC baseline models with the private dataset kept local.
+"""Train PIID-main baseline models.
 
-This script mirrors the PIID experiment: six backbones, 17 augmentation
-settings, five patient-level folds, and random seed 40.  HUMC images and
-patient identifiers are not distributed.  Place the locally authorized data
-and split files in the documented paths before running this script.
+This script trains six backbones across 17 augmentation settings using the
+released PIID split files.
 
 Default experiment:
 
-    - Dataset: HUMC train/validation folds from data/splits/humc
+    - Dataset: PIID train/validation folds from data/splits/piid
     - Backbones: Swin-Tiny, EfficientNetV2-S, ViT-B/16, ResNet-50,
       DenseNet-121, ConvNeXt-S
     - Augmentation settings: 17 settings, exp00_NoAug through
@@ -38,21 +36,21 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from albumentations.pytorch import ToTensorV2
-from PIL import Image, ImageOps
+from PIL import Image
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
-DEVELOPMENT_DIR = CODE_ROOT / "development"
-if str(DEVELOPMENT_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVELOPMENT_DIR))
+CORE_DIR = CODE_ROOT / "core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
 from model_pipeline_utils import get_model  # noqa: E402
 from path_config import (  # noqa: E402
-    HUMC_CHECKPOINT_DIR,
-    HUMC_SPLIT_DIR,
+    PIID_CHECKPOINT_DIR,
+    PIID_SPLIT_DIR,
     resolve_project_paths,
 )
 
@@ -124,7 +122,7 @@ class AlbImageDataset(Dataset):
         path = self.image_paths[idx]
         label = int(self.labels[idx])
         with Image.open(path) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
+            image = image.convert("RGB")
             image = np.asarray(image)
         if self.transform is not None:
             image = self.transform(image=image)["image"]
@@ -143,7 +141,7 @@ def set_seed(seed: int) -> None:
 def build_train_transform(mean: list[float], std: list[float], aug_flags: dict) -> A.Compose:
     transforms = [A.Resize(INPUT_SIZE, INPUT_SIZE)]
     if aug_flags.get("use_flip"):
-        transforms.append(A.HorizontalFlip(p=0.5))
+        transforms.append(A.Flip(p=0.5))
     if aug_flags.get("use_rotate"):
         transforms.append(A.RandomRotate90(p=0.5))
     if aug_flags.get("use_zoomin"):
@@ -191,14 +189,13 @@ def build_eval_transform(mean: list[float], std: list[float]) -> A.Compose:
 
 
 def load_split_files() -> tuple[pd.DataFrame, dict, dict]:
-    trainval_csv = HUMC_SPLIT_DIR / "trainval_set.csv"
-    fold_json = HUMC_SPLIT_DIR / "fold_indices.json"
-    norm_csv = HUMC_SPLIT_DIR / "normalization_stats.csv"
+    trainval_csv = PIID_SPLIT_DIR / "piid_trainval_set.csv"
+    fold_json = PIID_SPLIT_DIR / "piid_fold_indices.json"
+    norm_csv = PIID_SPLIT_DIR / "normalization_stats.csv"
     if not trainval_csv.exists() or not fold_json.exists() or not norm_csv.exists():
         raise FileNotFoundError(
-            "Private HUMC split files are missing. Run "
-            "code/experiment/dataset_split_normalization_humc_patient_level.py "
-            "inside the authorized environment first."
+            "PIID split files are missing. Run "
+            "code/pipeline/dataset_split_normalization_piid_main.py first."
         )
 
     df_trainval = pd.read_csv(trainval_csv)
@@ -270,6 +267,7 @@ def train_one_fold(
         AlbImageDataset(train_paths, train_labels.tolist(), train_transform),
         batch_size=args.batch_size,
         shuffle=True,
+        drop_last=True,
         num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
         generator=torch.Generator().manual_seed(RANDOM_SEED + fold_id),
@@ -294,7 +292,7 @@ def train_one_fold(
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     run_name = f"{backbone}_Baseline_{aug_name}_bs{args.batch_size}_lr{args.lr:.0e}_wd{args.weight_decay:.0e}"
-    run_dir = HUMC_CHECKPOINT_DIR / run_name
+    run_dir = PIID_CHECKPOINT_DIR / run_name
     weight_dir = run_dir / "best_models_weights"
     weight_dir.mkdir(parents=True, exist_ok=True)
     weight_path = weight_dir / f"best_model_fold_{fold_id}.pth"
@@ -379,7 +377,7 @@ def train_one_fold(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train HUMC baseline models.")
+    parser = argparse.ArgumentParser(description="Train PIID baseline models.")
     parser.add_argument("--models", nargs="+", default=BACKBONES, choices=BACKBONES)
     parser.add_argument("--augmentations", nargs="+", default=list(AUGMENTATION_CONFIGS), choices=list(AUGMENTATION_CONFIGS))
     parser.add_argument("--folds", nargs="+", type=int, default=list(range(1, N_FOLDS + 1)))
@@ -402,7 +400,7 @@ def main() -> None:
     print(f"[DEVICE] {device}")
 
     df_trainval, fold_indices, norm_stats = load_split_files()
-    HUMC_CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+    PIID_CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
     all_results = []
     for backbone in args.models:
@@ -422,11 +420,11 @@ def main() -> None:
                 )
                 all_results.append(result)
                 pd.DataFrame(all_results).to_csv(
-                    HUMC_CHECKPOINT_DIR / "__training_summary.csv",
+                    PIID_CHECKPOINT_DIR / "__training_summary.csv",
                     index=False,
                 )
 
-    print(f"[DONE] Training summary: {HUMC_CHECKPOINT_DIR / '__training_summary.csv'}")
+    print(f"[DONE] Training summary: {PIID_CHECKPOINT_DIR / '__training_summary.csv'}")
 
 
 if __name__ == "__main__":

@@ -1,36 +1,45 @@
 # Code map
 
+## `core`
+
+- `path_config.py`: repository-relative data and output locations.
+- `model_pipeline_utils.py`: shared six-backbone model factory and classifier heads.
+- `model_params_reference.csv`: parameter-count reference used in reporting.
+
 ## `data_curation`
 
-- `prepare_public_datasets.py`: apply the released exclusions, center-square crop, and resize PIID/Kaggle images.
-- `screen_duplicate_candidates.py`: ResNet-18 cosine and pixel-similarity candidate screen for expert review.
-- `duplicate_pairs.csv`: all 20 reviewed duplicate pairs and pair-level decisions.
-- `*_duplicate_exclusions.csv`: executable exclusion manifests (10 PIID, 18 Kaggle images).
+- `prepare_public_datasets.py`: released exclusions and byte-preserving copies of retained PIID/Kaggle source files.
+- `screen_duplicate_candidates.py`: supplementary ResNet-18 and pixel-similarity candidate screen for expert review.
+- `duplicate_pairs.csv` and `*_duplicate_exclusions.csv`: reviewed decisions and executable public exclusion manifests.
 
-## `development`
+## `pipeline`
 
-- `path_config.py`: repository-relative public/private data and output paths.
-- `model_pipeline_utils.py`: shared six-backbone model factory and classifier heads.
-- `model_params_reference.csv`: parameter-count reference.
-
-## `experiment`
-
-- `dataset_split_normalization_piid_main.py`: PIID image-level split and fold normalization.
-- `dataset_split_normalization_humc_patient_level.py`: private HUMC patient-grouped split workflow.
-- `train_{piid|humc}_6models_17augmentations.py`: full five-fold training entry points.
-- `evaluate_{piid|humc}_trained_final_results.py`: internal and cross-dataset validation.
+- `dataset_split_normalization_piid_main.py`: PIID image-level split and per-fold normalisation using Albumentations 224 x 224 resize.
+- `dataset_split_normalization_humc_patient_level.py`: controlled HUMC patient-grouped split workflow using the same resize method.
+- `train_{piid|humc}_6models_17augmentations.py`: five-fold training entry points for six architectures and 17 augmentation conditions.
+- `evaluate_{piid|humc}_trained_final_results.py`: internal and cross-dataset validation from locally generated fold weights.
 
 ## `analysis`
 
 - `bootstrap_macro_f1_foldwise.py`: no-ensemble, fold-wise image bootstrap.
-- `friedman_nemenyi_foldwise.py`: dataset-specific rank analysis with Iman-Davenport decision rule.
-- `extract_resnet18_features.py` and `feature_space_analysis.py`: shared-encoder feature workflow.
-- `staging_error_direction.py`: error-direction summaries.
+- `build_cohort_summary_table.py`: Table 1-ready public/aggregate cohort and split summary.
+- `friedman_nemenyi_foldwise.py`: dataset-specific architecture rank analysis.
+- `staging_error_direction.py`: adjacent/non-adjacent staging-error summaries.
+- `extract_resnet18_features.py`: common ResNet-18 feature export.
+- `feature_space_statistics.py`: silhouette, centroid-distance, and representative-image calculations; it deliberately does not draw UMAP.
 
 ## `visualization`
 
 - `plot_evaluation_results.py`: confusion matrices, ROC curves, and augmentation heatmaps.
+- `plot_sankey_fold_averaged.py`: fold-averaged confusion-flow Sankey plots.
 - `plot_critical_difference.py`: critical-difference diagrams.
-- `plot_sankey_fold_averaged.py`: fold-averaged confusion-flow diagrams.
+- `plot_umap.py`: Main Figure 3 UMAP from already exported features; run in the separate UMAP environment.
+- `plot_centroid_montage.py`: Main Figure 4 centroid-nearest image montage.
 
-Every executable supports `--help`. Generated files are written beneath `data/results`.
+## Release checks
+
+- `check_environment.py`: checks the main training/evaluation environment.
+- `check_checkpoint_compatibility.py`: checks stored checkpoint architecture compatibility before evaluation.
+- `validate_release_package.py`: static privacy, layout, and syntax checks before a public commit.
+
+Every executable supports `--help`. Generated files are written under `data/results`, which is excluded from Git.

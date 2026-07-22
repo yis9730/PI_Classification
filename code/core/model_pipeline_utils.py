@@ -25,7 +25,11 @@ FINAL_BASELINE_BACKBONES = (
 
 
 class UnifiedHeadModel(nn.Module):
-    """timm feature backbone with the study's shared two-layer classifier."""
+    """Study backbone plus its shared two-layer classifier.
+
+    Five final backbones use timm. EfficientNet-V2-S is intentionally fixed to
+    torchvision because the study's timm lookup fell back to that exact model.
+    """
 
     def __init__(
         self,
@@ -58,7 +62,9 @@ class UnifiedHeadModel(nn.Module):
             was_training = self.backbone.training
             self.backbone.eval()
             with torch.no_grad():
-                sample = self.backbone(torch.zeros(2, 3, input_size, input_size))
+                # Preserve the study trainer's RNG consumption before the
+                # classifier layers are initialised.
+                sample = self.backbone(torch.randn(2, 3, input_size, input_size))
                 in_features = self._pool_features(sample).shape[1]
             self.backbone.train(was_training)
 
