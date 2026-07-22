@@ -1,8 +1,12 @@
-# Pressure Injury Stage Classification: reproducible analysis package
+# Cross-Dataset Reliability of Deep Learning Models for Pressure Injury Staging: A Multi-Architecture Evaluation and Prediction-Error Analysis
 
-This repository is the public, publication-oriented implementation for four-class pressure-injury staging. It is organised around a complete reproduction path: data curation → split generation → training/evaluation → statistical analysis → main figures and tables.
+This repository contains the code and supporting materials for a cross-dataset evaluation of automated four-class pressure injury staging. The central question is whether models that perform well on an internal test set remain reliable when applied—without additional fine-tuning, threshold adjustment, or hyperparameter optimisation—to wound images acquired and curated under different conditions.
 
-PIID and Kaggle source images remain downloadable from their original providers. HUMC is a controlled hospital dataset and is not distributed here. The code and expected output schemas are public, but HUMC-dependent results require separately authorised local access.
+After duplicate-image screening and expert review, the analysis included 3,066 images: 1,081 from the Pressure Injury Image Dataset (PIID), 1,844 institutional HUMC bedside images, and 141 web-collected Kaggle images. Six ImageNet-pretrained CNN and Transformer architectures—ResNet-50, DenseNet-121, EfficientNetV2-S, ConvNeXt-S, ViT-B/16, and Swin-T—were trained separately on PIID and HUMC. The analyses compare internal and cross-dataset macro-F1, architecture ranks, augmentation sensitivity, the direction of staging errors, and frozen ResNet-18 feature differences by dataset source and pressure injury stage.
+
+The main finding was a generalisation gap rather than a consistently superior backbone. PIID-trained models achieved a mean macro-F1 of 0.75 internally, decreasing to 0.36 on HUMC and 0.56 on Kaggle; HUMC-trained models achieved 0.66 internally and 0.53 on both external datasets. Neither architecture choice nor conventional augmentation removed this gap. PIID-trained models predominantly understaged HUMC images, whereas HUMC-trained models predominantly overstaged PIID images. Exploratory feature analysis likewise found stronger dataset-level than stage-level structure. Together, these findings show why internal testing alone is insufficient and why pressure injury imaging studies need independent external validation and more standardised image acquisition and curation.
+
+The repository releases public-dataset curation decisions, reconstruction manifests, data-splitting, training, and evaluation code, statistical analyses, and workflows for reproducing the manuscript figures and tables. PIID and Kaggle can be reconstructed from their original public sources. The institutional HUMC images are not distributed; reproducing analyses that include HUMC requires separately authorised local access.
 
 ## Start here
 
